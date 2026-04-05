@@ -183,7 +183,7 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 <div class="layout">
 <aside class="sidebar">
   <div class="sb-title">Monte seu roteiro</div>
-  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Funciona 100% offline, sem API e sem IA online.</strong></div>
+  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Funciona 100% offline.</strong></div>
   <div class="field">
     <label>Modo de viagem</label>
     <div class="toggle-tabs">
@@ -738,6 +738,21 @@ const LOCAL_EXPERIENCE_TEMPLATES=[
 ];
 
 const ACTIVITY_PHOTOS=buildActivityPhotoIndex(ACTIVITY_PHOTOS_MANUAL);
+
+const LOCAL_EXPERIENCE_TEMPLATES=[
+  {n:'Café da manhã de bairro',d:'Comece o dia em uma padaria/café tradicional para observar o ritmo local.',type:'☕ Vida local'},
+  {n:'Mercado de produtores',d:'Visite um mercado de bairro para provar produtos sazonais e conversar com vendedores.',type:'🛍 Mercado'},
+  {n:'Passeio arquitetônico',d:'Caminhe por ruas históricas e observe fachadas, praças e detalhes urbanos.',type:'🏛 Arquitetura'},
+  {n:'Parque urbano',d:'Pausa em uma área verde para desacelerar e recuperar energia.',type:'🌿 Natureza'},
+  {n:'Rota de mirantes',d:'Escolha 1 ou 2 pontos altos para ver a cidade em diferentes horários.',type:'🌅 Vista'},
+  {n:'Rua gastronômica',d:'Explore uma rua famosa por bares e restaurantes e escolha um prato típico.',type:'🍴 Gastronomia'},
+  {n:'Museu ou centro cultural alternativo',d:'Inclua um espaço menos turístico para variar o repertório do roteiro.',type:'🎨 Cultura'},
+  {n:'Bairro residencial',d:'Passeio sem pressa por uma área residencial para viver a cidade além dos cartões-postais.',type:'🏘 Bairro'},
+  {n:'Lojas e design local',d:'Descubra lojas de criadores locais, livrarias e pequenos ateliês.',type:'🛍 Compras'},
+  {n:'Fim de tarde panorâmico',d:'Reserve o fim da tarde em um ponto com boa vista para fotos e descanso.',type:'🌇 Pôr do sol'},
+  {n:'Circuito histórico',d:'Conecte 2 a 3 pontos históricos próximos para evitar deslocamentos longos.',type:'🏛 Patrimônio'},
+  {n:'Noite cultural',d:'Inclua show, teatro, música ao vivo ou apresentação típica da região.',type:'🎵 Noite'},
+];
 
 const LOCAL_EXPERIENCE_TEMPLATES=[
   {n:'Café da manhã de bairro',d:'Comece o dia em uma padaria/café tradicional para observar o ritmo local.',type:'☕ Vida local'},
