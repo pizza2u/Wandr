@@ -136,7 +136,8 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 .act:last-child{border:none;}
 .act-bullet{width:8px;height:8px;border-radius:50%;background:var(--amber);opacity:.7;margin-top:5px;flex-shrink:0;}
 .act-content{flex:1;}
-.act-name{font-weight:600;font-size:.88rem;margin-bottom:3px;}
+.act-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.act-name{font-weight:600;font-size:.88rem;margin-bottom:3px;line-height:1.4;}
 .act-desc{font-size:.78rem;color:var(--soft);line-height:1.55;}
 .act-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;}
 .act-tag{font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.3px;}
@@ -144,6 +145,19 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 .tag-tip{background:rgba(106,152,112,.12);color:var(--sage2);}
 .tag-warn{background:rgba(192,80,96,.12);color:#E08090;}
 .tag-type{background:var(--bg3);color:var(--soft);border:1px solid var(--border);}
+.act-photo-btn{border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:.68rem;font-weight:700;padding:4px 8px;border-radius:7px;cursor:pointer;white-space:nowrap;line-height:1;}
+.act-photo-btn:hover{border-color:var(--amber);color:var(--amber2);}
+.photo-pref{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg3);border:1px solid var(--border2);padding:10px 12px;border-radius:10px;margin-bottom:12px;}
+.photo-pref label{font-size:.76rem;color:var(--soft);font-weight:600;}
+.photo-pref input{accent-color:var(--amber);}
+
+/* MODAL FOTO */
+.photo-modal{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:999;padding:18px;}
+.photo-modal.show{display:flex;}
+.photo-modal-box{position:relative;max-width:min(980px,100%);width:100%;}
+.photo-close{position:absolute;top:-40px;right:0;border:1px solid var(--border2);background:var(--bg3);color:var(--text);border-radius:8px;padding:6px 10px;font-size:.75rem;cursor:pointer;}
+.photo-modal img{width:100%;max-height:78vh;object-fit:cover;border-radius:12px;border:1px solid var(--border2);}
+.photo-cap{font-size:.78rem;color:#D7D0C8;margin-top:8px;line-height:1.5;}
 
 /* TRAVEL NOTE */
 .travel-note{display:flex;align-items:flex-start;gap:10px;padding:10px 20px;background:rgba(58,144,144,.06);border-top:1px solid rgba(58,144,144,.12);}
@@ -157,7 +171,7 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 .tip-item:last-child{border:none;}
 .tip-item::before{content:'✦';color:var(--gold);font-size:.55rem;margin-top:4px;flex-shrink:0;}
 
-@media(max-width:600px){.sidebar{padding:20px 16px;}.output{padding:20px 16px;}.result-hdr{flex-direction:column;gap:12px;}.result-hdr h1{font-size:1.5rem;}}
+@media(max-width:600px){.sidebar{padding:20px 16px;}.output{padding:20px 16px;}.result-hdr{flex-direction:column;gap:12px;}.result-hdr h1{font-size:1.5rem;}.act-head{flex-direction:column;align-items:flex-start;}.act-photo-btn{padding:6px 10px;font-size:.72rem;}}
 </style>
 </head>
 <body>
@@ -169,7 +183,7 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 <div class="layout">
 <aside class="sidebar">
   <div class="sb-title">Monte seu roteiro</div>
-  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.</div>
+  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Funciona 100% offline, sem integração de IA online.</strong></div>
   <div class="field">
     <label>Modo de viagem</label>
     <div class="toggle-tabs">
@@ -201,6 +215,10 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
     <div class="month-grid" id="month-grid"></div>
     <div class="season-hint" id="season-hint"></div>
   </div>
+  <div class="photo-pref">
+    <label for="photos-toggle">🖼 Exibir opção de fotos nas atrações</label>
+    <input type="checkbox" id="photos-toggle" checked onchange="togglePhotos(this.checked)">
+  </div>
   <div class="err-box" id="err-box"></div>
   <button class="btn-gen" onclick="generate()">✦ Gerar Roteiro</button>
 </aside>
@@ -213,6 +231,13 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
   <div class="loading" id="loading"><div class="spinner"></div><p id="loading-msg">Montando seu roteiro…</p></div>
   <div id="result" style="display:none"></div>
 </main>
+</div>
+<div class="photo-modal" id="photo-modal" role="dialog" aria-modal="true" aria-label="Foto do lugar">
+  <div class="photo-modal-box">
+    <button class="photo-close" type="button" onclick="closePhotoModal()">Fechar ✕</button>
+    <img id="photo-modal-img" alt="" onerror="handleModalImgError(this)">
+    <div class="photo-cap" id="photo-modal-cap"></div>
+  </div>
 </div>
 
 <script>
@@ -604,7 +629,93 @@ const COUNTRY_TIPS={
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-let mode='country', selectedMonth=null, selectedDays=7;
+let mode='country', selectedMonth=null, selectedDays=7, showPhotoOption=true;
+let photoRequestSeq=0;
+
+const CITY_PHOTOS={
+  'Rio de Janeiro':'https://upload.wikimedia.org/wikipedia/commons/8/87/Cidade_Maravilhosa.jpg',
+  'São Paulo':'https://upload.wikimedia.org/wikipedia/commons/2/2e/Sao_Paulo_Montage.png',
+  'Paris':'https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg',
+  'Roma':'https://upload.wikimedia.org/wikipedia/commons/c/c2/Rome_Montage_2017.png',
+  'Tóquio':'https://upload.wikimedia.org/wikipedia/commons/1/14/Tokyo_Montage_2015.jpg',
+  'Kyoto':'https://upload.wikimedia.org/wikipedia/commons/6/65/Kyoto_Montage.jpg',
+  'Lisboa':'https://upload.wikimedia.org/wikipedia/commons/6/6d/Lisbon_Montage.png',
+  'Nova York':'https://upload.wikimedia.org/wikipedia/commons/4/4d/New_York_City_at_night_HDR.jpg',
+  'Londres':'https://upload.wikimedia.org/wikipedia/commons/c/cd/London_Montage_L.jpg',
+  'Barcelona':'https://upload.wikimedia.org/wikipedia/commons/f/fd/Barcelona_Montage_2014.png'
+};
+
+const ACTIVITY_PHOTOS_MANUAL={
+  // BRASIL
+  'Cristo Redentor':'https://upload.wikimedia.org/wikipedia/commons/e/e3/Cristo_Redentor_-_Rio_de_Janeiro%2C_Brasil.jpg',
+  'Pão de Açúcar':'https://upload.wikimedia.org/wikipedia/commons/9/97/Pao_de_Acucar_-_Rio.jpg',
+  'Santa Teresa':'https://upload.wikimedia.org/wikipedia/commons/0/0d/Santa_Teresa_Rio_de_Janeiro.jpg',
+  'Ipanema & Leblon':'https://upload.wikimedia.org/wikipedia/commons/6/69/Ipanema_beach%2C_Rio_de_Janeiro.jpg',
+  'Lapa à noite':'https://upload.wikimedia.org/wikipedia/commons/a/a8/Arcos_da_Lapa_-_Rio.jpg',
+  'MASP':'https://upload.wikimedia.org/wikipedia/commons/9/9f/MASP_Sao_Paulo.jpg',
+  'Avenida Paulista':'https://upload.wikimedia.org/wikipedia/commons/0/0a/Avenida_Paulista_-_Sao_Paulo.jpg',
+  'Ibirapuera':'https://upload.wikimedia.org/wikipedia/commons/f/f5/Parque_do_Ibirapuera.jpg',
+  'Pelourinho':'https://upload.wikimedia.org/wikipedia/commons/f/f4/Pelourinho_Salvador_Bahia.jpg',
+  'Elevador Lacerda':'https://upload.wikimedia.org/wikipedia/commons/5/57/Elevador_Lacerda_Salvador.jpg',
+  'Recife Antigo':'https://upload.wikimedia.org/wikipedia/commons/2/2a/Recife_Antigo.jpg',
+  'Praia de Boa Viagem':'https://upload.wikimedia.org/wikipedia/commons/7/79/Praia_de_Boa_Viagem_Recife.jpg',
+  'Praia do Futuro':'https://upload.wikimedia.org/wikipedia/commons/0/06/Praia_do_Futuro_Fortaleza.jpg',
+  'Cataratas do Iguaçu — lado brasileiro':'https://upload.wikimedia.org/wikipedia/commons/3/3f/Iguazu_Falls%2C_Brazil.jpg',
+
+  // JAPÃO
+  'Senso-ji (Asakusa)':'https://upload.wikimedia.org/wikipedia/commons/2/27/Sensoji_Temple.jpg',
+  'Tsukiji — sushi de manhã':'https://upload.wikimedia.org/wikipedia/commons/3/3f/Tsukiji_Outer_Market.jpg',
+  'Shibuya Crossing':'https://upload.wikimedia.org/wikipedia/commons/5/5b/Shibuya_Crossing%2C_Tokyo%2C_Japan_%282018%29.jpg',
+  'Meiji Jingu':'https://upload.wikimedia.org/wikipedia/commons/b/bb/Meiji_Shrine_Inner_Garden.jpg',
+  'Harajuku — Takeshita Street':'https://upload.wikimedia.org/wikipedia/commons/0/08/Takeshita_Street_Harajuku_2020.jpg',
+  'Akihabara':'https://upload.wikimedia.org/wikipedia/commons/a/a5/Akihabara_Electric_Town.jpg',
+  'Yanaka':'https://upload.wikimedia.org/wikipedia/commons/4/47/Yanaka_Ginza%2C_Tokyo.jpg',
+  'teamLab Borderless':'https://upload.wikimedia.org/wikipedia/commons/7/75/TeamLab_Borderless_Odaiba.jpg',
+  'Tokyo Skytree':'https://upload.wikimedia.org/wikipedia/commons/1/14/Tokyo_Skytree_2014_%28cropped%29.jpg',
+  'Shinjuku — Golden Gai à noite':'https://upload.wikimedia.org/wikipedia/commons/9/93/Golden_Gai%2C_Shinjuku%2C_Tokyo.jpg',
+  'Tokyo Skytree + Asakusa':'https://upload.wikimedia.org/wikipedia/commons/1/14/Tokyo_Skytree_2014_%28cropped%29.jpg',
+  'Fushimi Inari':'https://upload.wikimedia.org/wikipedia/commons/0/0e/Fushimi_Inari-Taisha_in_Kyoto.jpg',
+  'Kinkaku-ji':'https://upload.wikimedia.org/wikipedia/commons/6/65/Kinkaku-ji_the_Golden_Temple_in_Kyoto_overlooking_the_lake_-_highres.jpg',
+  'Arashiyama — Floresta de Bambu':'https://upload.wikimedia.org/wikipedia/commons/9/95/Sagano_Bamboo_forest%2C_Arashiyama%2C_Kyoto.jpg',
+  'Gion ao entardecer':'https://upload.wikimedia.org/wikipedia/commons/9/98/Gion%2C_Kyoto%2C_Japan.jpg',
+  'Nishiki Market':'https://upload.wikimedia.org/wikipedia/commons/f/f0/Nishiki_Market%2C_Kyoto.jpg',
+  'Dotonbori':'https://upload.wikimedia.org/wikipedia/commons/5/5f/Dotonbori_area_Namba_Osaka_Japan.jpg',
+  'Castelo de Osaka':'https://upload.wikimedia.org/wikipedia/commons/2/2e/Osaka_Castle_Nishinomaru_Garden_April_2005.jpg',
+  'Kuromon Market':'https://upload.wikimedia.org/wikipedia/commons/9/93/Kuromon_Market_Osaka_2023.jpg',
+  'Namba e Shinsaibashi à noite':'https://upload.wikimedia.org/wikipedia/commons/e/e0/Shinsaibashi%2C_Osaka.jpg',
+
+  // EUROPA
+  'Torre Eiffel':'https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg',
+  'Louvre':'https://upload.wikimedia.org/wikipedia/commons/a/af/Louvre_Museum_Wikimedia_Commons.jpg',
+  'Musée d\'Orsay':'https://upload.wikimedia.org/wikipedia/commons/1/1f/Mus%C3%A9e_d%27Orsay%2C_Paris_2018.jpg',
+  'Montmartre & Sacré-Cœur':'https://upload.wikimedia.org/wikipedia/commons/5/5b/Basilique_du_Sacr%C3%A9-C%C5%93ur_de_Montmartre%2C_Paris_2013-05.JPG',
+  'Le Marais':'https://upload.wikimedia.org/wikipedia/commons/8/8d/Place_des_Vosges%2C_Le_Marais%2C_Paris.jpg',
+  'Sainte-Chapelle':'https://upload.wikimedia.org/wikipedia/commons/5/54/Sainte_Chapelle_Interior_Stained_Glass.jpg',
+  'Coliseu':'https://upload.wikimedia.org/wikipedia/commons/d/de/Colosseo_2020.jpg',
+  'Fórum Romano & Palatino':'https://upload.wikimedia.org/wikipedia/commons/2/23/Roman_Forum_view_from_Palatine.jpg',
+  'Vaticano — Museus e Sistina':'https://upload.wikimedia.org/wikipedia/commons/c/cd/Vatican_Museums_Staircase.jpg',
+  'Fontana di Trevi':'https://upload.wikimedia.org/wikipedia/commons/f/f4/Fontana_di_Trevi_2016.jpg',
+  'Panthéon':'https://upload.wikimedia.org/wikipedia/commons/6/66/Pantheon_Rome_2019.jpg',
+  'Sagrada Família':'https://upload.wikimedia.org/wikipedia/commons/2/2f/Sagrada_Familia_01.jpg',
+  'Park Güell':'https://upload.wikimedia.org/wikipedia/commons/9/93/Park_Guell_Barcelona.jpg'
+};
+
+const LOCAL_EXPERIENCE_TEMPLATES=[
+  {n:'Café da manhã de bairro',d:'Comece o dia em uma padaria/café tradicional para observar o ritmo local.',type:'☕ Vida local'},
+  {n:'Mercado de produtores',d:'Visite um mercado de bairro para provar produtos sazonais e conversar com vendedores.',type:'🛍 Mercado'},
+  {n:'Passeio arquitetônico',d:'Caminhe por ruas históricas e observe fachadas, praças e detalhes urbanos.',type:'🏛 Arquitetura'},
+  {n:'Parque urbano',d:'Pausa em uma área verde para desacelerar e recuperar energia.',type:'🌿 Natureza'},
+  {n:'Rota de mirantes',d:'Escolha 1 ou 2 pontos altos para ver a cidade em diferentes horários.',type:'🌅 Vista'},
+  {n:'Rua gastronômica',d:'Explore uma rua famosa por bares e restaurantes e escolha um prato típico.',type:'🍴 Gastronomia'},
+  {n:'Museu ou centro cultural alternativo',d:'Inclua um espaço menos turístico para variar o repertório do roteiro.',type:'🎨 Cultura'},
+  {n:'Bairro residencial',d:'Passeio sem pressa por uma área residencial para viver a cidade além dos cartões-postais.',type:'🏘 Bairro'},
+  {n:'Lojas e design local',d:'Descubra lojas de criadores locais, livrarias e pequenos ateliês.',type:'🛍 Compras'},
+  {n:'Fim de tarde panorâmico',d:'Reserve o fim da tarde em um ponto com boa vista para fotos e descanso.',type:'🌇 Pôr do sol'},
+  {n:'Circuito histórico',d:'Conecte 2 a 3 pontos históricos próximos para evitar deslocamentos longos.',type:'🏛 Patrimônio'},
+  {n:'Noite cultural',d:'Inclua show, teatro, música ao vivo ou apresentação típica da região.',type:'🎵 Noite'},
+];
+
+const ACTIVITY_PHOTOS=buildActivityPhotoIndex(ACTIVITY_PHOTOS_MANUAL);
 
 // ═══════════════════════════════════════════════════
 // INIT
@@ -613,6 +724,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   populateCountries();
   buildMonthGrid();
   document.getElementById('hdr-count').textContent=COUNTRIES.length+' países';
+  document.getElementById('photo-modal').addEventListener('click',(e)=>{
+    if(e.target.id==='photo-modal') closePhotoModal();
+  });
+  document.addEventListener('keydown',(e)=>{
+    if(e.key==='Escape') closePhotoModal();
+  });
 });
 
 function populateCountries(){
@@ -678,6 +795,187 @@ function updateCityList(){
   sel.innerHTML=c&&c.cities.length?c.cities.map(ci=>`<option value="${ci}">${ci}</option>`).join(''):'<option value="">— Selecione o país primeiro —</option>';
 }
 
+function togglePhotos(enabled){
+  showPhotoOption=enabled;
+}
+
+function buildActivityPhotoIndex(manualMap){
+  const merged={...manualMap};
+  Object.entries(CITY_ACTS).forEach(([city,info])=>{
+    const cityPhoto=CITY_PHOTOS[city]||'';
+    (info.acts||[]).forEach(act=>{
+      if(!merged[act.n]){
+        merged[act.n]=cityPhoto||buildInlinePhoto(act.n,city);
+      }
+    });
+  });
+  return merged;
+}
+
+function getPhotoUrl(activityName,city){
+  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
+}
+
+function buildInlinePhoto(title,city){
+  const safeTitle=escapeXml(String(title||'Atração').slice(0,44));
+  const safeCity=escapeXml(String(city||'Destino').slice(0,40));
+  const svg=`
+  <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#1C1917"/>
+        <stop offset="100%" stop-color="#3A2A1A"/>
+      </linearGradient>
+    </defs>
+    <rect width="1200" height="760" fill="url(#bg)"/>
+    <circle cx="980" cy="120" r="180" fill="#D4903A" opacity="0.20"/>
+    <circle cx="240" cy="640" r="210" fill="#5AB8B8" opacity="0.12"/>
+    <text x="80" y="330" fill="#F4EBDD" font-size="64" font-family="Arial, Helvetica, sans-serif" font-weight="700">${safeTitle}</text>
+    <text x="82" y="392" fill="#D9C7AE" font-size="34" font-family="Arial, Helvetica, sans-serif">📍 ${safeCity}</text>
+    <text x="82" y="690" fill="#B39F88" font-size="26" font-family="Arial, Helvetica, sans-serif">Wandr • modo offline</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${toBase64Utf8(svg)}`;
+}
+
+function escapeXml(v){
+  return v
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&apos;');
+}
+
+function toBase64Utf8(str){
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+function handleModalImgError(img){
+  if(img.dataset.fallback==='1') return;
+  const t=img.dataset.title||'Atração';
+  const c=img.dataset.city||'Destino';
+  img.dataset.fallback='1';
+  img.src=buildInlinePhoto(t,c);
+}
+
+function escSingle(v){
+  return String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+
+function openPhotoModal(title,city){
+  const modal=document.getElementById('photo-modal');
+  const img=document.getElementById('photo-modal-img');
+  const cap=document.getElementById('photo-modal-cap');
+  photoRequestSeq++;
+  img.dataset.title=title;
+  img.dataset.city=city;
+  img.dataset.fallback='0';
+  img.src=getPhotoUrl(title,city);
+  img.alt=`Foto de ${title} em ${city}`;
+  cap.textContent=`${title} — ${city}`;
+  modal.classList.add('show');
+}
+
+function closePhotoModal(){
+  const modal=document.getElementById('photo-modal');
+  const img=document.getElementById('photo-modal-img');
+  photoRequestSeq++;
+  modal.classList.remove('show');
+  img.src='';
+  img.dataset.title='';
+  img.dataset.city='';
+  img.dataset.fallback='0';
+}
+
+function createSeededRng(seedStr){
+  let seed=0;
+  for(let i=0;i<seedStr.length;i++) seed=(seed*31+seedStr.charCodeAt(i))>>>0;
+  if(seed===0) seed=0x9e3779b9;
+  return function(){
+    seed=(seed*1664525+1013904223)>>>0;
+    return seed/4294967296;
+  };
+}
+
+function shuffleWithSeed(arr,seedStr){
+  const rnd=createSeededRng(seedStr);
+  const out=[...arr];
+  for(let i=out.length-1;i>0;i--){
+    const j=Math.floor(rnd()*(i+1));
+    [out[i],out[j]]=[out[j],out[i]];
+  }
+  return out;
+}
+
+function buildActivityPool(cityData,countryGeneric,month,seedKey){
+  const source=cityData?[...cityData.acts]:countryGeneric.length?[...countryGeneric]:[...COUNTRY_GENERIC_ACTS.default_generic];
+  return shuffleWithSeed(source,seedKey).map(a=>({
+    ...a,
+    snote:a.seasonal&&a.seasonal[month]?a.seasonal[month]:null
+  }));
+}
+
+function pickDayActivities(pool,usedCounts,lastDayNames,count,preferNight){
+  const picked=[];
+  const mustAvoid=new Set(lastDayNames);
+  const eligible=pool
+    .map((a,idx)=>({a,idx}))
+    .sort((x,y)=>{
+      const cx=usedCounts[x.idx]||0;
+      const cy=usedCounts[y.idx]||0;
+      if(cx!==cy) return cx-cy;
+      return x.idx-y.idx;
+    });
+
+  for(const item of eligible){
+    if(picked.length>=count) break;
+    if(mustAvoid.has(item.a.n)) continue;
+    picked.push(item.a);
+    usedCounts[item.idx]=(usedCounts[item.idx]||0)+1;
+  }
+
+  if(picked.length<count){
+    for(const item of eligible){
+      if(picked.length>=count) break;
+      if(picked.some(p=>p.n===item.a.n)) continue;
+      picked.push(item.a);
+      usedCounts[item.idx]=(usedCounts[item.idx]||0)+1;
+    }
+  }
+
+  if(preferNight){
+    const night=pool.find(a=>a.type&&a.type.includes('Noite')&&!picked.some(p=>p.n===a.n)&&!mustAvoid.has(a.n));
+    if(night) picked.push(night);
+  }
+
+  return picked;
+}
+
+function enrichPoolForLongTrips(pool,city,minUniqueNeeded){
+  const uniqueNames=new Set(pool.map(a=>a.n));
+  const target=Math.max(uniqueNames.size,Math.min(minUniqueNeeded,24));
+  if(uniqueNames.size>=target) return pool;
+
+  const out=[...pool];
+  let idx=0;
+  while(uniqueNames.size<target){
+    const tpl=LOCAL_EXPERIENCE_TEMPLATES[idx%LOCAL_EXPERIENCE_TEMPLATES.length];
+    const cycle=Math.floor(idx/LOCAL_EXPERIENCE_TEMPLATES.length)+1;
+    const name=`${tpl.n} — ${city}${cycle>1?` (${cycle})`:''}`;
+    if(!uniqueNames.has(name)){
+      out.push({
+        n:name,
+        d:`${tpl.d} Em ${city}, escolha essa atividade como alternativa para variar o dia.`,
+        type:tpl.type,
+        tip:'Alternativa sugerida para evitar repetição de atrações.'
+      });
+      uniqueNames.add(name);
+    }
+    idx++;
+  }
+  return out;
+}
+
 // ═══════════════════════════════════════════════════
 // GENERATE
 // ═══════════════════════════════════════════════════
@@ -724,34 +1022,19 @@ function buildItinerary(ck,cityFilter,days,month){
 function buildCityItinerary(city,ck,days,month,si,flag,destName){
   const cityData=CITY_ACTS[city];
   const countryGeneric=COUNTRY_GENERIC_ACTS[ck]||COUNTRY_GENERIC_ACTS.default_generic;
-
-  // Pegar atividades — prioriza banco específico da cidade, fallback para genérico do país
-  let pool=cityData?[...cityData.acts]:countryGeneric.length?[...countryGeneric]:[...COUNTRY_GENERIC_ACTS.default_generic];
-
-  // Aplicar notas sazonais
-  pool=pool.map(a=>{
-    const snote=a.seasonal&&a.seasonal[month]?a.seasonal[month]:null;
-    return {...a,snote};
-  });
+  let pool=buildActivityPool(cityData,countryGeneric,month,`${ck}-${city}-${month}-city`);
 
   // MÁXIMO de atividades realistas por dia em cidade:
   // 3 atividades de dia (manhã, tarde, final de tarde) + 1 opcional noturna
-  // Para roteiro longo, cicla o pool mas avisa quando estão se repetindo
   const ACT_PER_DAY=3;
+  pool=enrichPoolForLongTrips(pool,city,days*ACT_PER_DAY);
   const dayPlans=[];
   const DAY_TITLES=['Chegada & Primeiras Impressões','Monumentos & Cultura','Gastronomia & Bairros','Arte & Museus','Vida Local & Mercados','Natureza & Paisagens','Exploração & Descoberta','Relaxe & Contemplação','Patrimônio & Arquitetura','Sabores & Tradições'];
-
-  // Para cidades com poucos dias e poucas atividades no pool, garantir variedade
-  let actIdx=0;
+  const usedCounts={};
+  let lastDayNames=[];
   for(let d=0;d<days;d++){
-    const dayActs=[];
-    for(let j=0;j<ACT_PER_DAY;j++){
-      dayActs.push(pool[actIdx%pool.length]);
-      actIdx++;
-    }
-    // Adicionar atividade noturna se houver no pool (tipo Noite) e for após o 1º dia
-    const nightAct=pool.find((a,i)=>a.type&&a.type.includes('Noite')&&i!==actIdx-1&&i!==actIdx-2&&i!==actIdx-3);
-    if(nightAct&&d>0) dayActs.push(nightAct);
+    const dayActs=pickDayActivities(pool,usedCounts,lastDayNames,ACT_PER_DAY,d>0);
+    lastDayNames=dayActs.map(a=>a.n);
     dayPlans.push({day:d+1,city,title:DAY_TITLES[d%DAY_TITLES.length],activities:dayActs});
   }
 
@@ -789,16 +1072,16 @@ function buildCountryItinerary(ck,countryObj,cleanName,days,month,si,flag){
   routeCities.forEach((rc,ci)=>{
     const cityData=CITY_ACTS[rc.city];
     const countryGeneric=COUNTRY_GENERIC_ACTS[ck]||COUNTRY_GENERIC_ACTS.default_generic;
-    const pool=cityData?[...cityData.acts]:countryGeneric.length?[...countryGeneric]:[...COUNTRY_GENERIC_ACTS.default_generic];
-    const poolWithSeason=pool.map(a=>({...a,snote:a.seasonal&&a.seasonal[month]?a.seasonal[month]:null}));
-
-    let actIdx=0;
+    let poolWithSeason=buildActivityPool(cityData,countryGeneric,month,`${ck}-${rc.city}-${month}-${ci}`);
+    poolWithSeason=enrichPoolForLongTrips(poolWithSeason,rc.city,rc.days*3);
+    const usedCounts={};
+    let lastDayNames=[];
     for(let dd=0;dd<rc.days;dd++){
       const globalDay=rc.startDay+dd;
       const isArrivalDay=globalDay===rc.startDay&&ci>0; // dia de chegada numa nova cidade
       const actsCount=isArrivalDay?2:3; // dia de chegada: 2 atividades (viagem tomou tempo)
-      const dayActs=[];
-      for(let j=0;j<actsCount;j++){dayActs.push(poolWithSeason[actIdx%poolWithSeason.length]);actIdx++;}
+      const dayActs=pickDayActivities(poolWithSeason,usedCounts,lastDayNames,actsCount,dd>0);
+      lastDayNames=dayActs.map(a=>a.n);
       dayPlans.push({
         day:globalDay,
         city:rc.city,
@@ -828,7 +1111,10 @@ function renderResult(flag,name,si,month,days,isCity,routeCities,dayPlans,ck,abo
 
   const daysHTML=dayPlans.map((dp,di)=>{
     const travelNote=dp.isTravel&&dp.prevCity?`<div class="travel-note"><div class="travel-note-icon">🚌</div><p>Deslocamento de ${dp.prevCity} para ${dp.city}. Considere transporte de manhã (trem, ônibus ou voo) e aproveite a tarde para se estabelecer.</p></div>`:'';
-    const actsHTML=dp.activities.map((a,ai)=>`<div class="act"><div class="act-bullet"></div><div class="act-content"><div class="act-name">${a.n}</div><div class="act-desc">${a.d}</div><div class="act-tags">${a.type?`<span class="act-tag tag-type">${a.type}</span>`:''} ${a.snote?`<span class="act-tag tag-season">${a.snote}</span>`:''} ${a.tip?`<span class="act-tag tag-tip">💡 ${a.tip}</span>`:''}</div></div></div>`).join('');
+    const actsHTML=dp.activities.map((a,ai)=>{
+      const photoBtn=showPhotoOption?`<button type="button" class="act-photo-btn" onclick="openPhotoModal('${escSingle(a.n)}','${escSingle(dp.city)}')">Ver foto</button>`:'';
+      return `<div class="act"><div class="act-bullet"></div><div class="act-content"><div class="act-head"><div class="act-name">${a.n}</div>${photoBtn}</div><div class="act-desc">${a.d}</div><div class="act-tags">${a.type?`<span class="act-tag tag-type">${a.type}</span>`:''} ${a.snote?`<span class="act-tag tag-season">${a.snote}</span>`:''} ${a.tip?`<span class="act-tag tag-tip">💡 ${a.tip}</span>`:''}</div></div></div>`;
+    }).join('');
     return `<div class="day-card" style="animation-delay:${di*.04}s"><div class="day-head"><div class="day-head-left"><span class="day-num">Dia ${dp.day}</span><span class="day-title">${dp.title}</span></div>${routeCities.length>1?`<span class="day-city-tag">📍 ${dp.city}</span>`:''}</div>${travelNote}<div class="day-body">${actsHTML}</div></div>`;
   }).join('');
 
