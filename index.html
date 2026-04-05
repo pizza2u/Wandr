@@ -145,6 +145,19 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 .tag-tip{background:rgba(106,152,112,.12);color:var(--sage2);}
 .tag-warn{background:rgba(192,80,96,.12);color:#E08090;}
 .tag-type{background:var(--bg3);color:var(--soft);border:1px solid var(--border);}
+.act-photo-btn{border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:.68rem;font-weight:700;padding:4px 8px;border-radius:7px;cursor:pointer;white-space:nowrap;line-height:1;}
+.act-photo-btn:hover{border-color:var(--amber);color:var(--amber2);}
+.photo-pref{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg3);border:1px solid var(--border2);padding:10px 12px;border-radius:10px;margin-bottom:12px;}
+.photo-pref label{font-size:.76rem;color:var(--soft);font-weight:600;}
+.photo-pref input{accent-color:var(--amber);}
+
+/* MODAL FOTO */
+.photo-modal{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:999;padding:18px;}
+.photo-modal.show{display:flex;}
+.photo-modal-box{position:relative;max-width:min(980px,100%);width:100%;}
+.photo-close{position:absolute;top:-40px;right:0;border:1px solid var(--border2);background:var(--bg3);color:var(--text);border-radius:8px;padding:6px 10px;font-size:.75rem;cursor:pointer;}
+.photo-modal img{width:100%;max-height:78vh;object-fit:cover;border-radius:12px;border:1px solid var(--border2);}
+.photo-cap{font-size:.78rem;color:#D7D0C8;margin-top:8px;line-height:1.5;}
 
 /* TRAVEL NOTE */
 .travel-note{display:flex;align-items:flex-start;gap:10px;padding:10px 20px;background:rgba(58,144,144,.06);border-top:1px solid rgba(58,144,144,.12);}
@@ -201,6 +214,34 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
     <label>Mês da viagem</label>
     <div class="month-grid" id="month-grid"></div>
     <div class="season-hint" id="season-hint"></div>
+  </div>
+  <div class="photo-pref">
+    <label for="photos-toggle">🖼 Exibir opção de fotos nas atrações</label>
+    <input type="checkbox" id="photos-toggle" checked onchange="togglePhotos(this.checked)">
+  </div>
+  <div class="photo-pref">
+    <label for="ai-photos-toggle">🤖 Buscar foto online automaticamente (Google Images API)</label>
+    <input type="checkbox" id="ai-photos-toggle" onchange="toggleAiPhotos(this.checked)">
+  </div>
+  <div class="field">
+    <label>Google Images API Key (opcional)</label>
+    <input type="password" id="google-api-key" placeholder="Cole sua API key" oninput="setGoogleApiKey(this.value)">
+  </div>
+  <div class="field">
+    <label>Google Search Engine ID / CX (opcional)</label>
+    <input type="text" id="google-cx" placeholder="Cole seu CX" oninput="setGoogleCx(this.value)">
+  </div>
+  <div class="photo-pref">
+    <label for="gpt-query-toggle">✨ Usar GPT para melhorar consulta de imagem</label>
+    <input type="checkbox" id="gpt-query-toggle" onchange="toggleGptQueryAssist(this.checked)">
+  </div>
+  <div class="field">
+    <label>OpenAI API Key (opcional)</label>
+    <input type="password" id="openai-api-key" placeholder="Cole sua OpenAI API key" oninput="setOpenAiApiKey(this.value)">
+  </div>
+  <div class="photo-pref">
+    <label for="ai-itinerary-toggle">🧠 Gerar roteiro com IA (opcional)</label>
+    <input type="checkbox" id="ai-itinerary-toggle" onchange="toggleAiItinerary(this.checked)">
   </div>
   <div class="err-box" id="err-box"></div>
   <button class="btn-gen" onclick="generate()">✦ Gerar Roteiro</button>
@@ -604,7 +645,99 @@ const COUNTRY_TIPS={
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-let mode='country', selectedMonth=null, selectedDays=7;
+let mode='country', selectedMonth=null, selectedDays=7, showPhotoOption=true, enableAiPhotoSearch=false;
+let photoRequestSeq=0;
+const photoSearchCache={};
+let googleApiKey='';
+let googleCx='';
+let openAiApiKey='';
+let enableGptQueryAssist=false;
+let enableAiItinerary=false;
+
+const CITY_PHOTOS={
+  'Rio de Janeiro':'https://upload.wikimedia.org/wikipedia/commons/8/87/Cidade_Maravilhosa.jpg',
+  'São Paulo':'https://upload.wikimedia.org/wikipedia/commons/2/2e/Sao_Paulo_Montage.png',
+  'Paris':'https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg',
+  'Roma':'https://upload.wikimedia.org/wikipedia/commons/c/c2/Rome_Montage_2017.png',
+  'Tóquio':'https://upload.wikimedia.org/wikipedia/commons/1/14/Tokyo_Montage_2015.jpg',
+  'Kyoto':'https://upload.wikimedia.org/wikipedia/commons/6/65/Kyoto_Montage.jpg',
+  'Lisboa':'https://upload.wikimedia.org/wikipedia/commons/6/6d/Lisbon_Montage.png',
+  'Nova York':'https://upload.wikimedia.org/wikipedia/commons/4/4d/New_York_City_at_night_HDR.jpg',
+  'Londres':'https://upload.wikimedia.org/wikipedia/commons/c/cd/London_Montage_L.jpg',
+  'Barcelona':'https://upload.wikimedia.org/wikipedia/commons/f/fd/Barcelona_Montage_2014.png'
+};
+
+const ACTIVITY_PHOTOS_MANUAL={
+  // BRASIL
+  'Cristo Redentor':'https://upload.wikimedia.org/wikipedia/commons/e/e3/Cristo_Redentor_-_Rio_de_Janeiro%2C_Brasil.jpg',
+  'Pão de Açúcar':'https://upload.wikimedia.org/wikipedia/commons/9/97/Pao_de_Acucar_-_Rio.jpg',
+  'Santa Teresa':'https://upload.wikimedia.org/wikipedia/commons/0/0d/Santa_Teresa_Rio_de_Janeiro.jpg',
+  'Ipanema & Leblon':'https://upload.wikimedia.org/wikipedia/commons/6/69/Ipanema_beach%2C_Rio_de_Janeiro.jpg',
+  'Lapa à noite':'https://upload.wikimedia.org/wikipedia/commons/a/a8/Arcos_da_Lapa_-_Rio.jpg',
+  'MASP':'https://upload.wikimedia.org/wikipedia/commons/9/9f/MASP_Sao_Paulo.jpg',
+  'Avenida Paulista':'https://upload.wikimedia.org/wikipedia/commons/0/0a/Avenida_Paulista_-_Sao_Paulo.jpg',
+  'Ibirapuera':'https://upload.wikimedia.org/wikipedia/commons/f/f5/Parque_do_Ibirapuera.jpg',
+  'Pelourinho':'https://upload.wikimedia.org/wikipedia/commons/f/f4/Pelourinho_Salvador_Bahia.jpg',
+  'Elevador Lacerda':'https://upload.wikimedia.org/wikipedia/commons/5/57/Elevador_Lacerda_Salvador.jpg',
+  'Recife Antigo':'https://upload.wikimedia.org/wikipedia/commons/2/2a/Recife_Antigo.jpg',
+  'Praia de Boa Viagem':'https://upload.wikimedia.org/wikipedia/commons/7/79/Praia_de_Boa_Viagem_Recife.jpg',
+  'Praia do Futuro':'https://upload.wikimedia.org/wikipedia/commons/0/06/Praia_do_Futuro_Fortaleza.jpg',
+  'Cataratas do Iguaçu — lado brasileiro':'https://upload.wikimedia.org/wikipedia/commons/3/3f/Iguazu_Falls%2C_Brazil.jpg',
+
+  // JAPÃO
+  'Senso-ji (Asakusa)':'https://upload.wikimedia.org/wikipedia/commons/2/27/Sensoji_Temple.jpg',
+  'Tsukiji — sushi de manhã':'https://upload.wikimedia.org/wikipedia/commons/3/3f/Tsukiji_Outer_Market.jpg',
+  'Shibuya Crossing':'https://upload.wikimedia.org/wikipedia/commons/5/5b/Shibuya_Crossing%2C_Tokyo%2C_Japan_%282018%29.jpg',
+  'Meiji Jingu':'https://upload.wikimedia.org/wikipedia/commons/b/bb/Meiji_Shrine_Inner_Garden.jpg',
+  'Harajuku — Takeshita Street':'https://upload.wikimedia.org/wikipedia/commons/0/08/Takeshita_Street_Harajuku_2020.jpg',
+  'Akihabara':'https://upload.wikimedia.org/wikipedia/commons/a/a5/Akihabara_Electric_Town.jpg',
+  'Yanaka':'https://upload.wikimedia.org/wikipedia/commons/4/47/Yanaka_Ginza%2C_Tokyo.jpg',
+  'teamLab Borderless':'https://upload.wikimedia.org/wikipedia/commons/7/75/TeamLab_Borderless_Odaiba.jpg',
+  'Tokyo Skytree':'https://upload.wikimedia.org/wikipedia/commons/1/14/Tokyo_Skytree_2014_%28cropped%29.jpg',
+  'Shinjuku — Golden Gai à noite':'https://upload.wikimedia.org/wikipedia/commons/9/93/Golden_Gai%2C_Shinjuku%2C_Tokyo.jpg',
+  'Tokyo Skytree + Asakusa':'https://upload.wikimedia.org/wikipedia/commons/1/14/Tokyo_Skytree_2014_%28cropped%29.jpg',
+  'Fushimi Inari':'https://upload.wikimedia.org/wikipedia/commons/0/0e/Fushimi_Inari-Taisha_in_Kyoto.jpg',
+  'Kinkaku-ji':'https://upload.wikimedia.org/wikipedia/commons/6/65/Kinkaku-ji_the_Golden_Temple_in_Kyoto_overlooking_the_lake_-_highres.jpg',
+  'Arashiyama — Floresta de Bambu':'https://upload.wikimedia.org/wikipedia/commons/9/95/Sagano_Bamboo_forest%2C_Arashiyama%2C_Kyoto.jpg',
+  'Gion ao entardecer':'https://upload.wikimedia.org/wikipedia/commons/9/98/Gion%2C_Kyoto%2C_Japan.jpg',
+  'Nishiki Market':'https://commons.wikimedia.org/wiki/Special:FilePath/A_view_of_Nishiki_Market,_Kyoto,_Japan.jpg',
+  'Dotonbori':'https://upload.wikimedia.org/wikipedia/commons/5/5f/Dotonbori_area_Namba_Osaka_Japan.jpg',
+  'Castelo de Osaka':'https://upload.wikimedia.org/wikipedia/commons/2/2e/Osaka_Castle_Nishinomaru_Garden_April_2005.jpg',
+  'Kuromon Market':'https://upload.wikimedia.org/wikipedia/commons/9/93/Kuromon_Market_Osaka_2023.jpg',
+  'Namba e Shinsaibashi à noite':'https://upload.wikimedia.org/wikipedia/commons/e/e0/Shinsaibashi%2C_Osaka.jpg',
+
+  // EUROPA
+  'Torre Eiffel':'https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg',
+  'Louvre':'https://upload.wikimedia.org/wikipedia/commons/a/af/Louvre_Museum_Wikimedia_Commons.jpg',
+  'Musée d\'Orsay':'https://upload.wikimedia.org/wikipedia/commons/1/1f/Mus%C3%A9e_d%27Orsay%2C_Paris_2018.jpg',
+  'Montmartre & Sacré-Cœur':'https://upload.wikimedia.org/wikipedia/commons/5/5b/Basilique_du_Sacr%C3%A9-C%C5%93ur_de_Montmartre%2C_Paris_2013-05.JPG',
+  'Le Marais':'https://upload.wikimedia.org/wikipedia/commons/8/8d/Place_des_Vosges%2C_Le_Marais%2C_Paris.jpg',
+  'Sainte-Chapelle':'https://upload.wikimedia.org/wikipedia/commons/5/54/Sainte_Chapelle_Interior_Stained_Glass.jpg',
+  'Coliseu':'https://upload.wikimedia.org/wikipedia/commons/d/de/Colosseo_2020.jpg',
+  'Fórum Romano & Palatino':'https://upload.wikimedia.org/wikipedia/commons/2/23/Roman_Forum_view_from_Palatine.jpg',
+  'Vaticano — Museus e Sistina':'https://upload.wikimedia.org/wikipedia/commons/c/cd/Vatican_Museums_Staircase.jpg',
+  'Fontana di Trevi':'https://upload.wikimedia.org/wikipedia/commons/f/f4/Fontana_di_Trevi_2016.jpg',
+  'Panthéon':'https://upload.wikimedia.org/wikipedia/commons/6/66/Pantheon_Rome_2019.jpg',
+  'Sagrada Família':'https://upload.wikimedia.org/wikipedia/commons/2/2f/Sagrada_Familia_01.jpg',
+  'Park Güell':'https://upload.wikimedia.org/wikipedia/commons/9/93/Park_Guell_Barcelona.jpg'
+};
+
+const LOCAL_EXPERIENCE_TEMPLATES=[
+  {n:'Café da manhã de bairro',d:'Comece o dia em uma padaria/café tradicional para observar o ritmo local.',type:'☕ Vida local'},
+  {n:'Mercado de produtores',d:'Visite um mercado de bairro para provar produtos sazonais e conversar com vendedores.',type:'🛍 Mercado'},
+  {n:'Passeio arquitetônico',d:'Caminhe por ruas históricas e observe fachadas, praças e detalhes urbanos.',type:'🏛 Arquitetura'},
+  {n:'Parque urbano',d:'Pausa em uma área verde para desacelerar e recuperar energia.',type:'🌿 Natureza'},
+  {n:'Rota de mirantes',d:'Escolha 1 ou 2 pontos altos para ver a cidade em diferentes horários.',type:'🌅 Vista'},
+  {n:'Rua gastronômica',d:'Explore uma rua famosa por bares e restaurantes e escolha um prato típico.',type:'🍴 Gastronomia'},
+  {n:'Museu ou centro cultural alternativo',d:'Inclua um espaço menos turístico para variar o repertório do roteiro.',type:'🎨 Cultura'},
+  {n:'Bairro residencial',d:'Passeio sem pressa por uma área residencial para viver a cidade além dos cartões-postais.',type:'🏘 Bairro'},
+  {n:'Lojas e design local',d:'Descubra lojas de criadores locais, livrarias e pequenos ateliês.',type:'🛍 Compras'},
+  {n:'Fim de tarde panorâmico',d:'Reserve o fim da tarde em um ponto com boa vista para fotos e descanso.',type:'🌇 Pôr do sol'},
+  {n:'Circuito histórico',d:'Conecte 2 a 3 pontos históricos próximos para evitar deslocamentos longos.',type:'🏛 Patrimônio'},
+  {n:'Noite cultural',d:'Inclua show, teatro, música ao vivo ou apresentação típica da região.',type:'🎵 Noite'},
+];
+
+const ACTIVITY_PHOTOS=buildActivityPhotoIndex(ACTIVITY_PHOTOS_MANUAL);
 
 const LOCAL_EXPERIENCE_TEMPLATES=[
   {n:'Café da manhã de bairro',d:'Comece o dia em uma padaria/café tradicional para observar o ritmo local.',type:'☕ Vida local'},
@@ -628,6 +761,22 @@ document.addEventListener('DOMContentLoaded',()=>{
   populateCountries();
   buildMonthGrid();
   document.getElementById('hdr-count').textContent=COUNTRIES.length+' países';
+  googleApiKey=localStorage.getItem('wandr_google_api_key')||'';
+  googleCx=localStorage.getItem('wandr_google_cx')||'';
+  openAiApiKey=localStorage.getItem('wandr_openai_api_key')||'';
+  enableGptQueryAssist=localStorage.getItem('wandr_gpt_query_assist')==='1';
+  enableAiItinerary=localStorage.getItem('wandr_ai_itinerary')==='1';
+  document.getElementById('google-api-key').value=googleApiKey;
+  document.getElementById('google-cx').value=googleCx;
+  document.getElementById('openai-api-key').value=openAiApiKey;
+  document.getElementById('gpt-query-toggle').checked=enableGptQueryAssist;
+  document.getElementById('ai-itinerary-toggle').checked=enableAiItinerary;
+  document.getElementById('photo-modal').addEventListener('click',(e)=>{
+    if(e.target.id==='photo-modal') closePhotoModal();
+  });
+  document.addEventListener('keydown',(e)=>{
+    if(e.key==='Escape') closePhotoModal();
+  });
 });
 
 function populateCountries(){
@@ -813,12 +962,14 @@ function generate(){
 // ═══════════════════════════════════════════════════
 // BUILD ITINERARY
 // ═══════════════════════════════════════════════════
-function buildItinerary(ck,cityFilter,days,month){
+async function buildItinerary(ck,cityFilter,days,month){
   const countryObj=COUNTRIES.find(c=>c.k===ck)||{name:'Destino',cities:[],k:ck};
   const flag=countryObj.name.match(/[\u{1F1E0}-\u{1F1FF}]{2}|[\u{1F3F4}]/u)?.[0]||'🌍';
   const cleanName=countryObj.name.replace(/^[\u{1F1E0}-\u{1F1FF}]{2}\s*/u,'').replace(/^[\u{1F3F4}][\S]*\s*/,'');
   const destName=cityFilter||cleanName;
   const si=(SEASONS[ck]||SEASONS._default)[month];
+  const aiBuilt=await buildAiItinerary(ck,cityFilter,days,month,countryObj,flag,cleanName,destName,si);
+  if(aiBuilt) return;
 
   // ── MODO CIDADE ──
   if(cityFilter){
@@ -827,6 +978,72 @@ function buildItinerary(ck,cityFilter,days,month){
   }
   // ── MODO PAÍS ──
   buildCountryItinerary(ck,countryObj,cleanName,days,month,si,flag);
+}
+
+async function buildAiItinerary(ck,cityFilter,days,month,countryObj,flag,cleanName,destName,si){
+  if(!enableAiItinerary||!openAiApiKey) return false;
+  try{
+    const cities=cityFilter?[cityFilter]:countryObj.cities.slice(0,Math.max(1,Math.min(countryObj.cities.length,Math.ceil(days/3))));
+    const cityActs=cities.map(c=>{
+      const acts=(CITY_ACTS[c]&&CITY_ACTS[c].acts?CITY_ACTS[c].acts:[]).slice(0,18).map(a=>a.n);
+      return {city:c,activities:acts};
+    });
+    const payload={
+      country:cleanName,
+      countryKey:ck,
+      month:MN[month],
+      days,
+      mode:cityFilter?'city':'country',
+      cityLocked:cityFilter||'',
+      cityActs
+    };
+    const res=await fetch('https://api.openai.com/v1/responses',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${openAiApiKey}`
+      },
+      body:JSON.stringify({
+        model:'gpt-4.1-mini',
+        input:[
+          {role:'system',content:'Você é um planejador de viagens. Responda apenas JSON válido. Formato: {"routeCities":[{"city":"Nome","days":2}],"dayPlans":[{"day":1,"city":"Nome","title":"...","activities":[{"n":"...","d":"...","type":"...","tip":"..."}]}]}.'},
+          {role:'user',content:`Monte um roteiro realista e sem repetição baseado neste contexto: ${JSON.stringify(payload)}`}
+        ],
+        temperature:0.35,
+        max_output_tokens:2000
+      })
+    });
+    if(!res.ok) return false;
+    const data=await res.json();
+    const text=(data&&data.output_text?String(data.output_text):'').trim();
+    const parsed=safeParseJsonObject(text);
+    if(!parsed||!Array.isArray(parsed.dayPlans)||!parsed.dayPlans.length) return false;
+
+    const normalizedDayPlans=parsed.dayPlans
+      .map((dp,idx)=>({
+        day:Number(dp.day)||idx+1,
+        city:String(dp.city||cityFilter||countryObj.cities[0]||cleanName),
+        title:String(dp.title||`Dia ${idx+1}`),
+        activities:Array.isArray(dp.activities)?dp.activities.slice(0,4).map(a=>({
+          n:String(a&&a.n?a.n:'Atividade'),
+          d:String(a&&a.d?a.d:'Explore a cidade no seu ritmo.'),
+          type:a&&a.type?String(a.type):'',
+          tip:a&&a.tip?String(a.tip):''
+        })):[]
+      }))
+      .filter(dp=>dp.day>=1&&dp.day<=days)
+      .sort((a,b)=>a.day-b.day);
+    if(!normalizedDayPlans.length) return false;
+
+    const routeCities=Array.isArray(parsed.routeCities)
+      ? parsed.routeCities.map(r=>({city:String(r.city||''),days:Number(r.days)||1})).filter(r=>r.city)
+      : [];
+
+    renderResult(flag,destName,si,month,days,Boolean(cityFilter),routeCities,normalizedDayPlans,ck,'','');
+    return true;
+  }catch(_err){
+    return false;
+  }
 }
 
 // ── MODO CIDADE: atividades SOMENTE da cidade selecionada ──
