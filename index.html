@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wandr — Planejar Viagem</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;0,700;1,300;1,600&family=Mulish:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0908;--bg2:#131110;--bg3:#1C1917;--bg4:#252220;
+  --border:#2E2A27;--border2:#3A3530;
+  --text:#EDE8E0;--soft:#9A9088;--muted:#5A5450;
+  --amber:#D4903A;--amber2:#F0B060;
+  --teal:#3A9090;--teal2:#5AB8B8;
+  --rose:#C05060;
+  --sage:#6A9870;--sage2:#8AC090;
+  --gold:#C8A860;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--bg2);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.hdr{height:60px;background:rgba(11,9,8,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:200;}
+.logo{font-family:'Fraunces',serif;font-size:1.7rem;font-weight:600;letter-spacing:-.5px;}
+.logo em{color:var(--amber);font-style:italic;}
+.hdr-tag{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.hdr-count{font-size:.75rem;color:var(--soft);background:var(--bg3);border:1px solid var(--border);padding:4px 12px;border-radius:20px;}
+.layout{display:grid;grid-template-columns:380px 1fr;min-height:calc(100vh - 60px);}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:28px 24px;overflow-y:auto;position:sticky;top:60px;height:calc(100vh - 60px);}
+@media(max-width:900px){.sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border);}}
+.sb-title{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;margin-bottom:6px;}
+.sb-sub{font-size:.8rem;color:var(--soft);margin-bottom:24px;line-height:1.5;}
+.field{margin-bottom:18px;}
+.field label{display:block;font-size:.7rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--soft);margin-bottom:7px;}
+.field input,.field select{width:100%;padding:11px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:'Mulish',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s,background .2s;}
+.field input:focus,.field select:focus{border-color:var(--amber);background:var(--bg4);}
+.field input::placeholder{color:var(--muted);}
+.field select option{background:var(--bg3);}
+.toggle-tabs{display:flex;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:18px;border:1px solid var(--border);}
+.ttab{flex:1;padding:9px;text-align:center;border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:600;letter-spacing:.3px;color:var(--soft);transition:all .2s;}
+.ttab.active{background:var(--amber);color:#fff;box-shadow:0 2px 8px rgba(212,144,58,.3);}
+.days-wrap{position:relative;}
+.days-display{position:absolute;right:0;top:-26px;font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--amber);}
+input[type=range]{width:100%;height:5px;-webkit-appearance:none;background:linear-gradient(to right,var(--amber) 0%,var(--amber) var(--pct,35%),var(--border2) var(--pct,35%));border-radius:3px;outline:none;cursor:pointer;border:none;padding:0;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:var(--amber);border-radius:50%;box-shadow:0 0 0 3px rgba(212,144,58,.2);transition:box-shadow .2s;}
+input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 6px rgba(212,144,58,.2);}
+.month-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.month-btn{padding:8px 4px;text-align:center;border-radius:8px;cursor:pointer;font-size:.75rem;font-weight:600;border:1.5px solid var(--border);color:var(--soft);background:var(--bg3);transition:all .18s;}
+.month-btn:hover{border-color:var(--amber);color:var(--amber);}
+.month-btn.active{background:var(--amber);border-color:var(--amber);color:#fff;}
+.month-btn .m-icon{font-size:.9rem;display:block;margin-bottom:2px;}
+.season-hint{display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;margin-top:12px;font-size:.8rem;color:var(--soft);line-height:1.6;}
+.season-hint.show{display:block;}
+.season-hint strong{color:var(--amber2);}
+.btn-gen{width:100%;padding:14px;border:none;border-radius:10px;background:var(--amber);color:#fff;font-family:'Mulish',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;transition:all .2s;letter-spacing:.3px;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-gen:hover{background:#C0801A;transform:translateY(-1px);box-shadow:0 6px 20px rgba(212,144,58,.25);}
+.btn-gen:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.divider{height:1px;background:var(--border);margin:20px 0;}
+.output{padding:32px 28px;overflow-y:auto;}
+.empty-state{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 20px;min-height:400px;}
+.empty-orb{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(212,144,58,.15),transparent 70%);border:1px solid rgba(212,144,58,.15);display:flex;align-items:center;justify-content:center;font-size:3rem;margin-bottom:24px;animation:pulse 3s ease infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(212,144,58,.1);}50%{box-shadow:0 0 0 20px rgba(212,144,58,.0);}}
+.empty-state h2{font-family:'Fraunces',serif;font-size:1.6rem;margin-bottom:8px;}
+.empty-state p{font-size:.85rem;color:var(--soft);max-width:320px;line-height:1.7;}
+.result-hdr{background:linear-gradient(135deg,var(--bg3),var(--bg4));border:1px solid var(--border2);border-radius:var(--r);padding:28px 32px;margin-bottom:24px;display:flex;gap:20px;align-items:flex-start;position:relative;overflow:hidden;}
+.result-hdr::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(212,144,58,.12),transparent 70%);}
+.result-flag{font-size:3rem;line-height:1;flex-shrink:0;}
+.result-info h1{font-family:'Fraunces',serif;font-size:2rem;font-weight:600;line-height:1.1;margin-bottom:4px;}
+.result-info h1 em{color:var(--amber);font-style:italic;}
+.result-meta{font-size:.8rem;color:var(--soft);margin-bottom:12px;}
+.result-meta span{color:var(--amber2);font-weight:600;}
+.badges{display:flex;gap:7px;flex-wrap:wrap;}
+.badge{font-size:.68rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 10px;border-radius:6px;}
+.badge-season{background:rgba(212,144,58,.15);color:var(--amber2);border:1px solid rgba(212,144,58,.2);}
+.badge-days{background:rgba(58,144,144,.15);color:var(--teal2);border:1px solid rgba(58,144,144,.2);}
+.badge-scope{background:rgba(106,152,112,.15);color:var(--sage2);border:1px solid rgba(106,152,112,.2);}
+.badge-warn{background:rgba(192,80,96,.15);color:#E08090;border:1px solid rgba(192,80,96,.2);}
+.season-card{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:20px 24px;margin-bottom:24px;display:flex;gap:16px;align-items:flex-start;}
+.season-icon{font-size:2rem;flex-shrink:0;}
+.season-card h3{font-family:'Fraunces',serif;font-size:1rem;margin-bottom:6px;color:var(--amber2);}
+.season-card p{font-size:.82rem;color:var(--soft);line-height:1.6;}
+.season-tips{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;}
+.stip{font-size:.7rem;padding:3px 9px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--soft);}
+.stip.good{background:rgba(106,152,112,.12);border-color:rgba(106,152,112,.2);color:var(--sage2);}
+.stip.warn{background:rgba(192,80,96,.12);border-color:rgba(192,80,96,.2);color:#E08090;}
+.route-bar{display:flex;gap:0;margin-bottom:24px;overflow-x:auto;padding-bottom:4px;}
+.route-stop{display:flex;align-items:center;gap:0;flex-shrink:0;}
+.route-city{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:600;white-space:nowrap;}
+.route-city.current{background:var(--amber);border-color:var(--amber);color:#fff;}
+.route-arrow{color:var(--muted);padding:0 8px;font-size:.9rem;}
+.days-grid{display:flex;flex-direction:column;gap:16px;}
+.day-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;animation:fadeUp .3s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.day-head{background:var(--bg3);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);}
+.day-head-left{display:flex;align-items:center;gap:12px;}
+.day-num{background:var(--amber);color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.5px;padding:4px 12px;border-radius:10px;white-space:nowrap;}
+.day-title{font-family:'Fraunces',serif;font-size:1rem;font-weight:600;}
+.day-city-tag{font-size:.7rem;padding:3px 9px;border-radius:6px;background:rgba(58,144,144,.15);color:var(--teal2);border:1px solid rgba(58,144,144,.2);white-space:nowrap;}
+.day-body{padding:16px 20px;}
+.act{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid var(--border);}
+.act:last-child{border:none;}
+.act-time{font-size:.7rem;font-weight:700;color:var(--amber);min-width:42px;text-align:right;padding-top:2px;flex-shrink:0;}
+.act-node{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+.act-dot{width:8px;height:8px;border-radius:50%;border:2px solid var(--amber);background:var(--bg2);margin-top:3px;flex-shrink:0;}
+.act-line{width:2px;flex:1;background:var(--border);margin-top:3px;min-height:16px;}
+.act:last-child .act-line{display:none;}
+.act-content{flex:1;}
+.act-name{font-weight:600;font-size:.88rem;margin-bottom:2px;}
+.act-desc{font-size:.78rem;color:var(--soft);line-height:1.55;}
+.act-note{display:inline-block;margin-top:5px;font-size:.68rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 8px;border-radius:5px;}
+.note-season{background:rgba(212,144,58,.15);color:var(--amber2);}
+.tips-section{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:20px 24px;margin-top:20px;}
+.tips-section h3{font-family:'Fraunces',serif;color:var(--gold);letter-spacing:.5px;margin-bottom:12px;text-transform:uppercase;font-size:.72rem;font-weight:700;}
+.tip-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:.82rem;color:var(--soft);line-height:1.5;}
+.tip-item:last-child{border:none;}
+.tip-item::before{content:'✦';color:var(--gold);font-size:.6rem;margin-top:4px;flex-shrink:0;}
+.loading{display:none;text-align:center;padding:80px 20px;}
+.loading.show{display:block;}
+.spinner{width:44px;height:44px;border:3px solid var(--border2);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 20px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading p{color:var(--soft);font-size:.88rem;}
+.err-box{display:none;background:rgba(192,80,96,.1);border:1px solid rgba(192,80,96,.25);border-radius:10px;padding:12px 16px;font-size:.82rem;color:#E08090;margin-top:10px;}
+.err-box.show{display:block;}
+@media(max-width:600px){.sidebar{padding:20px 16px;}.output{padding:20px 16px;}.result-hdr{flex-direction:column;gap:12px;}.result-hdr h1{font-size:1.5rem;}}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="logo">W<em>a</em>ndr</div>
+  <div class="hdr-count" id="hdr-count">… países</div>
+  <div class="hdr-tag">Planejamento de Viagem</div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+  <div class="sb-title">Monte seu roteiro</div>
+  <div class="sb-sub">Escolha o destino, os dias e o mês. O roteiro se adapta à estação e ao seu tempo disponível.</div>
+  <div class="field">
+    <label>Modo de viagem</label>
+    <div class="toggle-tabs">
+      <div class="ttab active" id="tab-country" onclick="setMode('country')">🌍 País inteiro</div>
+      <div class="ttab" id="tab-city" onclick="setMode('city')">🏙 Cidade</div>
+    </div>
+  </div>
+  <div class="field" id="field-country">
+    <label>País</label>
+    <select id="sel-country" onchange="onCountryChange()">
+      <option value="">— Selecione um país —</option>
+    </select>
+  </div>
+  <div class="field" id="field-city" style="display:none">
+    <label>Cidade</label>
+    <select id="sel-city"><option value="">— Selecione primeiro o país —</option></select>
+  </div>
+  <div class="divider"></div>
+  <div class="field">
+    <label>Quantidade de dias <span class="days-display" id="days-display">7 dias</span></label>
+    <div class="days-wrap">
+      <input type="range" id="days-range" min="1" max="30" value="7" oninput="updateDays(this.value)" style="margin-top:8px">
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.7rem;color:var(--muted);">
+      <span>1</span><span>7</span><span>15</span><span>30 dias</span>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="field">
+    <label>Quando você vai viajar?</label>
+    <div class="month-grid" id="month-grid"></div>
+    <div class="season-hint" id="season-hint"></div>
+  </div>
+  <div class="err-box" id="err-box"></div>
+  <button class="btn-gen" id="btn-gen" onclick="generate()"><span>✦</span> Gerar Roteiro</button>
+</aside>
+<main class="output" id="output">
+  <div class="empty-state" id="empty-state">
+    <div class="empty-orb">🗺️</div>
+    <h2>Seu roteiro aparece aqui</h2>
+    <p>Configure destino, dias e mês no painel ao lado. O roteiro se adapta à estação e distribui as cidades automaticamente.</p>
+  </div>
+  <div class="loading" id="loading"><div class="spinner"></div><p id="loading-msg">Montando seu roteiro…</p></div>
+  <div id="result" style="display:none"></div>
+</main>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// MESES
+// ══════════════════════════════════════════════════════════════
+const MONTHS=[{k:'jan',l:'Jan',icon:'❄️'},{k:'fev',l:'Fev',icon:'❄️'},{k:'mar',l:'Mar',icon:'🌸'},{k:'abr',l:'Abr',icon:'🌸'},{k:'mai',l:'Mai',icon:'☀️'},{k:'jun',l:'Jun',icon:'☀️'},{k:'jul',l:'Jul',icon:'🌻'},{k:'ago',l:'Ago',icon:'🌻'},{k:'set',l:'Set',icon:'🍂'},{k:'out',l:'Out',icon:'🍂'},{k:'nov',l:'Nov',icon:'🌧️'},{k:'dez',l:'Dez',icon:'❄️'}];
+const MN={jan:'Janeiro',fev:'Fevereiro',mar:'Março',abr:'Abril',mai:'Maio',jun:'Junho',jul:'Julho',ago:'Agosto',set:'Setembro',out:'Outubro',nov:'Novembro',dez:'Dezembro'};
+
+// ══════════════════════════════════════════════════════════════
+// PAÍSES + CIDADES (80+ países)
+// ══════════════════════════════════════════════════════════════
+const COUNTRIES = [
+  // ÁSIA LESTE
+  {k:'japao',     name:'🇯🇵 Japão',        continent:'Ásia',     cities:['Tóquio','Kyoto','Osaka','Hiroshima','Nara','Nikko','Hakone','Sapporo']},
+  {k:'china',     name:'🇨🇳 China',         continent:'Ásia',     cities:['Pequim','Xangai','Xi\'an','Chengdu','Guilin','Hong Kong','Hangzhou','Lijiang']},
+  {k:'coreia',    name:'🇰🇷 Coreia do Sul', continent:'Ásia',     cities:['Seul','Busan','Gyeongju','Jeju','Incheon','Jeonju']},
+  {k:'mongolia',  name:'🇲🇳 Mongólia',      continent:'Ásia',     cities:['Ulaanbaatar','Deserto de Gobi','Lago Khuvsgul','Kharkhorin']},
+  // ÁSIA SUDESTE
+  {k:'tailandia', name:'🇹🇭 Tailândia',     continent:'Ásia',     cities:['Bangkok','Chiang Mai','Phuket','Krabi','Koh Samui','Ayutthaya','Pai']},
+  {k:'vietna',    name:'🇻🇳 Vietnã',         continent:'Ásia',     cities:['Hoi An','Hanói','Ho Chi Minh','Halong Bay','Hué','Đà Nẵng','Sapa']},
+  {k:'indonesia', name:'🇮🇩 Indonésia',      continent:'Ásia',     cities:['Bali','Lombok','Yogyakarta','Jakarta','Komodo','Raja Ampat','Flores']},
+  {k:'camboja',   name:'🇰🇭 Camboja',        continent:'Ásia',     cities:['Siem Reap','Phnom Penh','Koh Rong','Battambang']},
+  {k:'laos',      name:'🇱🇦 Laos',           continent:'Ásia',     cities:['Luang Prabang','Vientiane','Vang Vieng','Si Phan Don']},
+  {k:'mianmar',   name:'🇲🇲 Mianmar',        continent:'Ásia',     cities:['Yangon','Bagan','Mandalay','Inle Lake','Ngapali']},
+  {k:'filipinas', name:'🇵🇭 Filipinas',      continent:'Ásia',     cities:['Manila','Palawan','Boracay','Cebu','Siargao','Coron']},
+  {k:'malásia',   name:'🇲🇾 Malásia',        continent:'Ásia',     cities:['Kuala Lumpur','Penang','Langkawi','Borneo','Melaka','Cameron Highlands']},
+  {k:'singapura', name:'🇸🇬 Singapura',      continent:'Ásia',     cities:['Marina Bay','Chinatown','Sentosa','Little India','Gardens by the Bay']},
+  {k:'myanmar',   name:'🇲🇲 Mianmar',        continent:'Ásia',     cities:['Bagan','Mandalay','Yangon','Inle Lake']},
+  // ÁSIA SUL
+  {k:'india',     name:'🇮🇳 Índia',          continent:'Ásia',     cities:['Delhi','Agra','Jaipur','Mumbai','Goa','Varanasi','Kerala','Jodhpur']},
+  {k:'nepal',     name:'🇳🇵 Nepal',          continent:'Ásia',     cities:['Katmandu','Pokhara','Everest Base Camp','Chitwan','Lumbini']},
+  {k:'srilanka',  name:'🇱🇰 Sri Lanka',      continent:'Ásia',     cities:['Colombo','Sigiriya','Kandy','Ella','Mirissa','Galle']},
+  {k:'bangladesh',name:'🇧🇩 Bangladesh',     continent:'Ásia',     cities:['Dhaka','Chittagong','Cox\'s Bazar','Sundarbans']},
+  {k:'paquistao', name:'🇵🇰 Paquistão',      continent:'Ásia',     cities:['Lahore','Islamabad','Karakoram Highway','Hunza Valley','Mohenjo-daro']},
+  // ÁSIA CENTRAL / OESTE
+  {k:'dubai',     name:'🇦🇪 Emirados Árabes',continent:'Oriente Médio', cities:['Dubai','Abu Dhabi','Sharjah','Ajman']},
+  {k:'israel',    name:'🇮🇱 Israel',         continent:'Oriente Médio', cities:['Jerusalém','Tel Aviv','Haifa','Mar Morto','Petra (Jordânia)','Nazaré']},
+  {k:'jordania',  name:'🇯🇴 Jordânia',       continent:'Oriente Médio', cities:['Petra','Amã','Wadi Rum','Mar Morto','Aqaba']},
+  {k:'georgia',   name:'🇬🇪 Geórgia',        continent:'Ásia',     cities:['Tbilisi','Kazbegi','Kutaisi','Batumi','Sighnaghi','Mestia']},
+  {k:'armenia',   name:'🇦🇲 Armênia',        continent:'Ásia',     cities:['Erevan','Lago Sevan','Garni','Tatev','Noravank']},
+  {k:'uzbequistao',name:'🇺🇿 Uzbequistão',  continent:'Ásia',     cities:['Samarcanda','Bukhara','Tashkent','Khiva','Fergana']},
+  {k:'cazaquistao',name:'🇰🇿 Cazaquistão',  continent:'Ásia',     cities:['Almaty','Astana','Lago Balhash','Charyn Canyon','Turquistan']},
+  {k:'quirguistao',name:'🇰🇬 Quirguistão',  continent:'Ásia',     cities:['Bishkek','Lago Issyk-Kul','Osh','Song Kul','Arslanbob']},
+  // EUROPA OCIDENTAL
+  {k:'franca',    name:'🇫🇷 França',         continent:'Europa',   cities:['Paris','Lyon','Nice','Bordeaux','Marselha','Estrasburgo','Bretanha','Mont Saint-Michel']},
+  {k:'italia',    name:'🇮🇹 Itália',         continent:'Europa',   cities:['Roma','Florença','Veneza','Milão','Nápoles','Amalfi','Sicília','Turim']},
+  {k:'espanha',   name:'🇪🇸 Espanha',        continent:'Europa',   cities:['Barcelona','Madri','Sevilha','Granada','Valencia','Bilbao','Toledo','Santiago de Compostela']},
+  {k:'portugal',  name:'🇵🇹 Portugal',       continent:'Europa',   cities:['Lisboa','Porto','Sintra','Algarve','Évora','Óbidos','Coimbra','Madeira']},
+  {k:'alemanha',  name:'🇩🇪 Alemanha',       continent:'Europa',   cities:['Berlim','Munique','Hamburgo','Colônia','Frankfurt','Heidelberg','Dresden','Rothenburg']},
+  {k:'austria',   name:'🇦🇹 Áustria',        continent:'Europa',   cities:['Viena','Salzburgo','Innsbruck','Graz','Hallstatt','Linz']},
+  {k:'suica',     name:'🇨🇭 Suíça',          continent:'Europa',   cities:['Zurique','Genebra','Berna','Lucerna','Interlaken','Zermatt','St. Moritz']},
+  {k:'holanda',   name:'🇳🇱 Holanda',        continent:'Europa',   cities:['Amsterdã','Roterdã','Haia','Utrecht','Delft','Keukenhof']},
+  {k:'belgica',   name:'🇧🇪 Bélgica',        continent:'Europa',   cities:['Bruxelas','Bruges','Gent','Antuérpia','Liège','Ghent']},
+  {k:'grecia',    name:'🇬🇷 Grécia',         continent:'Europa',   cities:['Atenas','Santorini','Mykonos','Creta','Rodes','Meteora','Tessalônica']},
+  {k:'turquia',   name:'🇹🇷 Turquia',        continent:'Europa/Ásia', cities:['Istambul','Capadócia','Antalya','Éfeso','Pamukkale','Konya','Trabzon']},
+  // EUROPA CENTRAL / LESTE
+  {k:'czechia',   name:'🇨🇿 Rep. Tcheca',   continent:'Europa',   cities:['Praga','Ceský Krumlov','Brno','Karlovy Vary','Olomouc']},
+  {k:'polonia',   name:'🇵🇱 Polônia',        continent:'Europa',   cities:['Varsóvia','Cracóvia','Gdansk','Wrocław','Zakopane','Poznań']},
+  {k:'hungria',   name:'🇭🇺 Hungria',        continent:'Europa',   cities:['Budapeste','Eger','Pécs','Lago Balaton','Debrecen']},
+  {k:'romania',   name:'🇷🇴 Romênia',        continent:'Europa',   cities:['Bucareste','Brașov','Sibiu','Cluj-Napoca','Sinaia','Delta do Danúbio']},
+  {k:'bulgaria',  name:'🇧🇬 Bulgária',       continent:'Europa',   cities:['Sofia','Plovdiv','Varna','Veliko Tarnovo','Rila','Nessebar']},
+  {k:'croacia',   name:'🇭🇷 Croácia',        continent:'Europa',   cities:['Dubrovnik','Split','Zagreb','Plitvice','Hvar','Zadar','Korčula']},
+  {k:'eslovenia', name:'🇸🇮 Eslovênia',      continent:'Europa',   cities:['Ljubljana','Lago Bled','Triglav','Piran','Postojna','Maribor']},
+  {k:'servia',    name:'🇷🇸 Sérvia',         continent:'Europa',   cities:['Belgrado','Novi Sad','Niš','Zlatibor','Đerdap']},
+  {k:'albania',   name:'🇦🇱 Albânia',        continent:'Europa',   cities:['Tirana','Berat','Gjirokastër','Saranda','Riviera Albanesa','Valbona']},
+  {k:'macedoniaN',name:'🇲🇰 Macedônia do N.',continent:'Europa',   cities:['Skopje','Lago Ohrid','Bitola','Mavrovo']},
+  // EUROPA NORTE
+  {k:'noruega',   name:'🇳🇴 Noruega',        continent:'Europa',   cities:['Oslo','Bergen','Fjords','Lofoten','Tromsø','Flåm']},
+  {k:'suecia',    name:'🇸🇪 Suécia',         continent:'Europa',   cities:['Estocolmo','Gotemburgo','Malmö','Uppsala','Abisko','Gotland']},
+  {k:'dinamarca', name:'🇩🇰 Dinamarca',      continent:'Europa',   cities:['Copenhague','Aarhus','Odense','Roskilde','Bornholm']},
+  {k:'finlandia', name:'🇫🇮 Finlândia',      continent:'Europa',   cities:['Helsinque','Rovaniemi','Turku','Tampere','Lapônia','Savonlinna']},
+  {k:'islandia',  name:'🇮🇸 Islândia',       continent:'Europa',   cities:['Reykjavík','Anel Dourado','Costa Sul','Snæfellsnes','Akureyri','Westfjords']},
+  {k:'irlanda',   name:'🇮🇪 Irlanda',        continent:'Europa',   cities:['Dublin','Galway','Cork','Killarney','Cliff of Moher','Dingle']},
+  {k:'escocia',   name:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escócia',     continent:'Europa',   cities:['Edimburgo','Glasgow','Highlands','Ilha de Skye','St Andrews','Loch Ness']},
+  {k:'inglaterra',name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra',   continent:'Europa',   cities:['Londres','Oxford','Bath','Cotswolds','Liverpool','Manchester','Cambridge']},
+  // AMÉRICAS NORTE
+  {k:'eua',       name:'🇺🇸 EUA',            continent:'Américas', cities:['Nova York','Los Angeles','Miami','Chicago','New Orleans','São Francisco','Las Vegas','Washington DC','Novo México','Grand Canyon']},
+  {k:'canada',    name:'🇨🇦 Canadá',         continent:'Américas', cities:['Toronto','Vancouver','Montreal','Quebec City','Banff','Victoria','Ottawa','Niagara Falls']},
+  {k:'mexico',    name:'🇲🇽 México',         continent:'Américas', cities:['Cidade do México','Cancún','Oaxaca','Guadalajara','Mérida','San Cristóbal','Guanajuato','Tulum']},
+  // AMÉRICAS CENTRAL / CARIBE
+  {k:'cuba',      name:'🇨🇺 Cuba',           continent:'Américas', cities:['Havana','Trinidad','Varadero','Viñales','Santiago de Cuba','Cienfuegos']},
+  {k:'costarica', name:'🇨🇷 Costa Rica',     continent:'Américas', cities:['San José','Manuel Antonio','Monteverde','Arenal','Tortuguero','Guanacaste']},
+  {k:'panama',    name:'🇵🇦 Panamá',         continent:'Américas', cities:['Cidade do Panamá','Bocas del Toro','Boquete','San Blas','Portobelo']},
+  {k:'guatemala', name:'🇬🇹 Guatemala',      continent:'Américas', cities:['Cidade da Guatemala','Antigua','Lago Atitlán','Tikal','Chichicastenango','Flores']},
+  {k:'colombia',  name:'🇨🇴 Colômbia',       continent:'Américas', cities:['Bogotá','Cartagena','Medellín','Cali','San Gil','Tayrona','Letícia']},
+  // AMÉRICAS SUL
+  {k:'brasil',    name:'🇧🇷 Brasil',         continent:'Américas', cities:['Rio de Janeiro','São Paulo','Salvador','Foz do Iguaçu','Manaus','Fortaleza','Florianópolis','Recife','Lençóis Maranhenses','Fernando de Noronha']},
+  {k:'peru',      name:'🇵🇪 Peru',           continent:'Américas', cities:['Lima','Cusco','Machu Picchu','Arequipa','Iquitos','Puno','Lago Titicaca','Nazca']},
+  {k:'argentina', name:'🇦🇷 Argentina',      continent:'Américas', cities:['Buenos Aires','Mendoza','Bariloche','Salta','Ushuaia','Córdoba','Iguazú','Patagônia']},
+  {k:'chile',     name:'🇨🇱 Chile',          continent:'Américas', cities:['Santiago','Patagônia','Torres del Paine','San Pedro de Atacama','Valparaíso','Ilha de Páscoa','Puerto Natales']},
+  {k:'bolivia',   name:'🇧🇴 Bolívia',        continent:'Américas', cities:['La Paz','Salar de Uyuni','Lago Titicaca','Sucre','Potosí','Santa Cruz','Rurrenabaque']},
+  {k:'equador',   name:'🇪🇨 Equador',        continent:'Américas', cities:['Quito','Galápagos','Baños','Cuenca','Otavalo','Amazônia','Islas de los Monos']},
+  {k:'venezuela', name:'🇻🇪 Venezuela',      continent:'Américas', cities:['Caracas','Salto Angel','Los Roques','Mérida','Canaima','Gran Sabana']},
+  {k:'uruguai',   name:'🇺🇾 Uruguai',        continent:'Américas', cities:['Montevidéu','Punta del Este','Colônia do Sacramento','Salto','Rocha']},
+  {k:'paraguai',  name:'🇵🇾 Paraguai',       continent:'Américas', cities:['Assunção','Ciudad del Este','Encarnación','Concepción','Missões']},
+  // ÁFRICA NORTE
+  {k:'marrocos',  name:'🇲🇦 Marrocos',       continent:'África',   cities:['Marrakech','Fes','Casablanca','Chefchaouen','Merzouga','Essaouira','Meknes','Agadir']},
+  {k:'egito',     name:'🇪🇬 Egito',          continent:'África',   cities:['Cairo','Luxor','Assuã','Alexandria','Hurghada','Sharm el-Sheikh','Siwa']},
+  {k:'tunisia',   name:'🇹🇳 Tunísia',        continent:'África',   cities:['Túnis','Sidi Bou Said','Sousse','Jerba','Douz','Kairouan','Hammamet']},
+  {k:'argelia',   name:'🇩🇿 Argélia',        continent:'África',   cities:['Argel','Taghit','Timgad','Tlemcen','Ghardaïa','Tassili n\'Ajjer']},
+  // ÁFRICA SUBSAARIANA
+  {k:'quenia',    name:'🇰🇪 Quênia',         continent:'África',   cities:['Nairobi','Masai Mara','Amboseli','Zanzibar','Diani Beach','Tsavo','Nakuru']},
+  {k:'tanzania',  name:'🇹🇿 Tanzânia',       continent:'África',   cities:['Serengeti','Zanzibar','Ngorongoro','Kilimanjaro','Dar es Salaam','Arusha','Mikumi']},
+  {k:'sudafrica', name:'🇿🇦 África do Sul',  continent:'África',   cities:['Cidade do Cabo','Joanesburgo','Safari Kruger','Garden Route','Stellenbosch','Durban','Hermanus']},
+  {k:'etiópia',   name:'🇪🇹 Etiópia',        continent:'África',   cities:['Adis Abeba','Lalibela','Axum','Gondar','Vale do Omo','Lago Langano','Bahir Dar']},
+  {k:'ruanda',    name:'🇷🇼 Ruanda',         continent:'África',   cities:['Kigali','Parque Vulcões','Lago Kivu','Nyungwe','Akagera']},
+  {k:'gana',      name:'🇬🇭 Gana',           continent:'África',   cities:['Accra','Cape Coast','Kumasi','Volta Region','Kakum','Bolgatanga']},
+  {k:'senegal',   name:'🇸🇳 Senegal',        continent:'África',   cities:['Dakar','Saint-Louis','Casamance','Delta du Saloum','Touba']},
+  {k:'madagascar',name:'🇲🇬 Madagáscar',     continent:'África',   cities:['Antananarivo','Nosy Be','Parque Isalo','Baie d\'Antongil','Morondava','Fort Dauphin']},
+  {k:'namibia',   name:'🇳🇦 Namíbia',        continent:'África',   cities:['Windhoek','Sossusvlei','Etosha','Skeleton Coast','Fish River Canyon','Swakopmund']},
+  {k:'botswana',  name:'🇧🇼 Botswana',       continent:'África',   cities:['Maun','Okavango Delta','Chobe','Kalahari','Makgadikgadi Pans','Kasane']},
+  {k:'zimbabwe',  name:'🇿🇼 Zimbábue',       continent:'África',   cities:['Cataratas Vitória','Hwange','Harare','Matobo Hills','Great Zimbabwe']},
+  {k:'mocambique',name:'🇲🇿 Moçambique',     continent:'África',   cities:['Maputo','Ilha de Moçambique','Vilankulo','Bazaruto','Inhambane','Quirimbas']},
+  // OCEANIA
+  {k:'australia', name:'🇦🇺 Austrália',      continent:'Oceania',  cities:['Sydney','Melbourne','Brisbane','Cairns','Perth','Adelaide','Uluru','Gold Coast','Tasmania']},
+  {k:'nz',        name:'🇳🇿 Nova Zelândia',  continent:'Oceania',  cities:['Auckland','Queenstown','Rotorua','Christchurch','Wellington','Milford Sound','Bay of Islands']},
+  {k:'fiji',      name:'🇫🇯 Fiji',           continent:'Oceania',  cities:['Viti Levu','Ilhas Mamanuca','Ilhas Yasawa','Savusavu','Taveuni']},
+  {k:'polinesia', name:'🇵🇫 Polinésia Francesa', continent:'Oceania', cities:['Bora Bora','Moorea','Tahiti','Rangiroa','Fakarava']},
+];
+
+// ══════════════════════════════════════════════════════════════
+// SAZONALIDADE (por país)
+// ══════════════════════════════════════════════════════════════
+const SEASONS = {
+  japao:{jan:{r:'🟡',t:'Inverno frio',d:'Frio (2–8°C), neve no norte. Mercados de Natal já passaram.',g:['Onsen (fontes termais)','Ski em Niseko','Menos turistas'],w:['Frio intenso','Dias curtos']},fev:{r:'🟡',t:'Final do inverno',d:'Primeiras ameixeiras em flor. Festival de neve de Sapporo.',g:['Ume (ameixeiras) florescendo','Festival de neve Sapporo'],w:['Ainda muito frio']},mar:{r:'🟢',t:'Cerejeiras chegando',d:'Sakura começa no sul. Primavera vibrante. Muito lotado.',g:['Cerejeiras no sul','Clima agradável (10–18°C)'],w:['Muito lotado e caro']},abr:{r:'🟢',t:'Pico das Cerejeiras',d:'O melhor mês. Sakura em pleno bloom. Kyoto e Tóquio esplêndidos.',g:['Sakura em plena flor','Clima perfeito','Ohanami (piqueniques)'],w:['Mês mais caro e cheio']},mai:{r:'🟢',t:'Primavera dourada',d:'Golden Week (29/04–5/05). Após ela: vazio e perfeito.',g:['Clima ideal (18–24°C)','Glicínias em flor','Pós-Golden Week: barato'],w:['Golden Week: tudo lotado']},jun:{r:'🟡',t:'Estação das chuvas',d:'Tsuyu — chuvas frequentes. Hortênsias espetaculares.',g:['Hortênsias em flor','Menos turistas','Preços menores'],w:['Chuvas frequentes','Umidade alta']},jul:{r:'🟡',t:'Verão quente',d:'Quente e úmido. Matsuri (festivais) e fogos de artifício.',g:['Festivais de verão','Fogos de artifício','Okinawa perfeita'],w:['Calor (30–36°C)','Umidade extrema']},ago:{r:'🟡',t:'Verão pleno',d:'Bon Odori, praia em Okinawa. Mês mais quente.',g:['Festivais de Bon','Praia em Okinawa'],w:['Calor (34–38°C)','Possibilidade de tufões']},set:{r:'🟢',t:'Final do verão',d:'Calor cedendo. Risco de tufões até meados do mês.',g:['Temperaturas caindo','Menos turistas'],w:['Risco de tufões']},out:{r:'🟢',t:'Koyo — Outono',d:'Folhas vermelhas e douradas. O segundo melhor mês.',g:['Momiji espetacular','Clima perfeito (15–22°C)','Festivais de outono'],w:['Um pouco lotado']},nov:{r:'🟢',t:'Outono profundo',d:'Pico do koyo em Tóquio e Kyoto. Clima perfeito.',g:['Folhas no auge','Menos turistas que abril'],w:['Dias mais curtos']},dez:{r:'🟡',t:'Início do inverno',d:'Iluminação natalina. Neve em Hokkaido. Onsen.',g:['Iluminação natalina','Onsen','Comidas de inverno'],w:['Frio crescente']}},
+
+  china:{jan:{r:'🟡',t:'Inverno frio',d:'Pequim e norte congelados. Sul mais ameno. Ano Novo Chinês (jan-fev).',g:['Ano Novo Chinês (festivo)','Menos turistas no sul','Paisagem nevada no norte'],w:['Pequim com -10°C','Poluição no inverno']},fev:{r:'🟢',t:'Ano Novo Chinês',d:'A maior festa da China. Fogos, desfiles e lanternas por todo o país.',g:['Ano Novo Chinês (espetacular)','Festival das Lanternas','Cultura viva'],w:['Transportes lotados','Reservas difíceis']},mar:{r:'🟢',t:'Primavera',d:'Flores de cerejeira em Wuhan e Hangzhou. Clima agradável.',g:['Cerejeiras em Wuhan','Hangzhou começa a florir','Clima ameno'],w:['Chuvas possíveis']},abr:{r:'🟢',t:'Primavera plena',d:'Flores em todo país. Ótimo para Guilin e sul da China.',g:['Guilin perfeito','Flores de rapanzel (colza) em amarelo','Clima ideal'],w:['Lotado nos feriados nacionais']},mai:{r:'🟢',t:'Primavera tardia',d:'Ideal para Yunnan e paisagens do oeste.',g:['Yunnan (Lijiang, Dali) perfeito','Chengdu (pandas) ótimo','Clima ameno'],w:['Feriado do Trabalho (1/05) lotado']},jun:{r:'🟡',t:'Início das chuvas',d:'Sul começa as chuvas monção. Norte mais seco.',g:['Norte (Pequim, Xi\'an) ainda ótimo','Xangai agradável'],w:['Sul chuvoso','Calor crescente']},jul:{r:'🟡',t:'Verão/Monção',d:'Calor intenso e chuvas no sul. Norte quente mas sem chuva.',g:['Inner Mongolia (vento e pradaria)','Tibet mais acessível (estrada aberta)'],w:['Calor (35–40°C) no leste','Tufões na costa sul']},ago:{r:'🟡',t:'Verão pleno',d:'O mês mais quente. Tibet na melhor estação (15–20°C).',g:['Tibet: melhor época (estrada e clima)','Mongólia Interior aberta'],w:['Calor extremo no leste e sul','Tufões possíveis']},set:{r:'🟢',t:'Outono começa',d:'Excelente para praticamente todo o país. Semana Dourada (1/10).',g:['Clima perfeito','Guilin com nevoeiro de outono','Pequim com folhas'],w:['Feriado Nacional (1-7/10): tudo lotado']},out:{r:'🟢',t:'Outono dourado',d:'O melhor mês para Pequim. Folhas na Muralha.',g:['Muralha da China com folhas vermelhas','Pequim perfeito','Xangai agradável'],w:['Pós-feriado ainda lotado']},nov:{r:'🟡',t:'Outono tardio',d:'Frio voltando no norte. Sul ainda ameno.',g:['Sul ainda agradável','Menos turistas'],w:['Norte esfriando rapidamente']},dez:{r:'🟡',t:'Inverno',d:'Norte congelado. Sul da China (Yunnan, Guangzhou) mais ameno.',g:['Yunnan ameno','Menos turistas em geral'],w:['Pequim -10°C','Poluição no inverno']}},
+
+  india:{jan:{r:'🟢',t:'Alta temporada',d:'O melhor período para a maioria do país. Temperatura amena (15–25°C).',g:['Rajastão perfeito','Goa na melhor época','Taj Mahal sem névoa'],w:['Alta temporada: caro e lotado','Kerala tem chuvas']},fev:{r:'🟢',t:'Melhor época',d:'Clima perfeito em quase todo o país.',g:['Jaipur (Festival de Elefantes em março)','Festivals de cores (Holi em março)','Tudo acessível'],w:['Comece a esquentar no final']},mar:{r:'🟢',t:'Holi',d:'Festival de Holi (cores) — um dos mais icônicos do mundo.',g:['Holi Festival (espetacular)','Clima ainda ótimo no norte','Sul perfeito'],w:['Norte aquecendo']},abr:{r:'🟡',t:'Pré-monção quente',d:'Norte muito quente. Sul ainda ameno.',g:['Sul da Índia (Kerala) ótimo','Himachal Pradesh abre'],w:['Rajastão até 45°C','Delhi escaldante']},mai:{r:'🟡',t:'Calor intenso',d:'Pré-monção. Muito quente no centro-norte.',g:['Himalaia (Ladakh, Manali) começa','Darjeeling perfeito'],w:['Norte insuportavelmente quente','Monção chegando no sul']},jun:{r:'🟡',t:'Monção começa',d:'Monção começa pelo sudoeste. Verde exuberante.',g:['Paisagens verdes deslumbrantes','Kerala nas chuvas é fascinante','Desconto em preços'],w:['Kerala e Mumbai encharcados','Algumas estradas fecham']},jul:{r:'🟡',t:'Monção plena',d:'Chuvas por quase todo o país. Não recomendado para a maioria.',g:['Desconto de 40% em tudo','Paisagem verde exuberante'],w:['Inundações possíveis','Muitas estradas fechadas']},ago:{r:'🟡',t:'Monção',d:'Continuação da monção. Ladakh e norte do Himachai abertos.',g:['Ladakh: pico da temporada','Independência (15/08)'],w:['Resto do país encharcado']},set:{r:'🟢',t:'Pós-monção',d:'Monção recuando. Vegetação verde, temperatura caindo.',g:['Rajastão começa a melhorar','Navaratri festival'],w:['Ainda húmido no início']},out:{r:'🟢',t:'Diwali',d:'Festival das luzes Diwali — o Natal da Índia. Celebrações espetaculares.',g:['Diwali (festival das luzes)','Clima perfeito','País todo festivo'],w:['Viagens caras no Diwali']},nov:{r:'🟢',t:'Alta temporada começa',d:'Perfeito para praticamente todo o país.',g:['Rajastão começa perfeito','Goa na melhor época','Festivals religiosos'],w:['Começa a encher de turistas']},dez:{r:'🟢',t:'Alta temporada',d:'O período mais popular. Clima ótimo.',g:['Goa perfeita','Taj Mahal cristalino','Natal em Goa é especial'],w:['Preços altos','Muito lotado']}},
+
+  tailandia:{jan:{r:'🟢',t:'Alta temporada',d:'O melhor período. Seco, quente (28–32°C) e ensolarado em todo o país.',g:['Praias perfeitas (Phuket, Krabi)','Chiang Mai fresca e animada','Bangkok agradável'],w:['Alta temporada: caro e lotado']},fev:{r:'🟢',t:'Melhor mês',d:'Clima perfeito, início das flores.',g:['Festival das Flores (Chiang Mai)','Praias ideais','Clima ameno no norte'],w:['Cheio de turistas']},mar:{r:'🟢',t:'Final da seca',d:'Ainda seco. Temperatures subindo.',g:['Praias ótimas','Submersão em Koh Tao (visibilidade máxima)'],w:['Começando a esquentar (35°C)']},abr:{r:'🟢',t:'Songkran',d:'Festival da Água (13–15/04) — a maior batalha d\'água do mundo. Reveillon Thai.',g:['Songkran (espetacular!)','Koh Samui ótima'],w:['Transporte completamente lotado','Algumas praias em baixa']},mai:{r:'🟡',t:'Monção começa',d:'Chuvas começando no sul e centro. Norte ainda seco.',g:['Norte ótimo (Chiang Mai, Pai)','Menos turistas','Desconto nos preços'],w:['Sul começa a ter chuvas','Bangkok úmida']},jun:{r:'🟡',t:'Estação das chuvas',d:'Chuvas pelo país. Preços baixos e paisagens verdes.',g:['Desconto de 30–50% em hotéis','Interior verde e exuberante'],w:['Chuvas diárias','Alguns resorts fecham']},jul:{r:'🟡',t:'Chuvas',d:'Monção ativa. Mas chuvas geralmente à tarde.',g:['Preços baixos','País verde','Cheung festival budista (Asahna Bucha)'],w:['Mar agitado no Golfo','Chuvas intensas']},ago:{r:'🟡',t:'Chuvas',d:'Ainda monção mas vales e cachoeiras no auge.',g:['Cachoeiras no auge','Menos turistas'],w:['Chuvas frequentes','Mar perigoso em Phuket']},set:{r:'🟡',t:'Pico das chuvas',d:'O mês mais chuvoso. Evite o sul.',g:['Norte (Chiang Rai) com paisagem verde'],w:['Sul não recomendado','Inundações possíveis']},out:{r:'🟡',t:'Transição',d:'Chuvas diminuindo. Loi Krathong (festival das lanternas).',g:['Loi Krathong (lanternas) — magnífico','Paisagem verde e deslumbrante'],w:['Ainda chuvoso no início']},nov:{r:'🟢',t:'Seca chegando',d:'Estação seca começa. Bangkok e norte ótimos.',g:['Yi Peng (lanternas em Chiang Mai)','Temperatura amena no norte','Praias do leste abertas'],w:['Sul ainda tem chuvas']},dez:{r:'🟢',t:'Alta temporada',d:'Perfeito para todo o país.',g:['Praias impecáveis','Bangkok animada','Natal e Ano Novo festivo'],w:['Preços altos','Muito lotado']}},
+
+  brasil:{jan:{r:'🟡',t:'Verão chuvoso',d:'Calor intenso. Chuvas no Sudeste. Nordeste perfeito.',g:['Nordeste (Ceará, Maranhão) ótimo','Pré-carnaval animado'],w:['Chuvas fortes no Rio e SP','Calor (35–40°C)']},fev:{r:'🟢',t:'Carnaval!',d:'O maior espetáculo da Terra. Rio, Salvador e Olinda.',g:['Carnaval do Rio (Sambódromo)','Carnaval de Salvador (trios)','Carnaval de Olinda (frevo)'],w:['O período mais caro do ano','Tudo reservado com antecedência']},mar:{r:'🟢',t:'Pós-Carnaval',d:'Nordeste na melhor temporada. Preços caem.',g:['Nordeste perfeito','Preços pós-carnaval','Menos multidões'],w:['Chuvas no Sul e Sudeste']},abr:{r:'🟢',t:'Outono ameno',d:'Outono ameno nas capitais. Nordeste excelente.',g:['Clima ameno em SP e Rio','Nordeste ótimo','Cachoeiras cheias no Centro-Oeste'],w:['Páscoa: preços altos']},mai:{r:'🟢',t:'Outono seco',d:'Melhor mês para Rio e Pantanal.',g:['Rio: clima perfeito (22–27°C)','Pantanal: fauna concentrada','Foz do Iguaçu potente'],w:['Nordeste começa chuvas']},jun:{r:'🟢',t:'Festas Juninas',d:'Maior evento cultural do Nordeste. Forró, quadrilha.',g:['Festas Juninas (Nordeste)','Pantanal: fauna excelente','Seco no Sudeste'],w:['Frio no Sul (8–15°C)']},jul:{r:'🟡',t:'Alta temporada',d:'Férias. Tudo lotado e caro.',g:['Serra Gaúcha no inverno','Arraial do Cabo','Festivais regionais'],w:['Preços altíssimos','Tudo reservado']},ago:{r:'🟢',t:'Inverno seco',d:'Pantanal no auge. Chapada Diamantina perfeita.',g:['Pantanal: melhor época','Chapada Diamantina','Noronha: raias manta'],w:['Seco no Norte (incêndios)']},set:{r:'🟢',t:'Final do inverno',d:'Temperatura subindo. Flores do Cerrado.',g:['Clima agradável','Cerrado florido','Noronha: alta temporada'],w:['Norte ainda seco']},out:{r:'🟡',t:'Primavera quente',d:'Chuvas voltando no Centro-Sul.',g:['Nordeste excelente','Praias de SP começando'],w:['Chuvas no Sudeste','Calor crescente']},nov:{r:'🟡',t:'Primavera chuvosa',d:'Lençóis Maranhenses cheios. Noronha perfeito.',g:['Noronha: melhor mês','Nordeste perfeito','Lençóis cheios'],w:['Chuvas em SP e Rio']},dez:{r:'🟡',t:'Verão e festas',d:'Réveillon lotado. Calor pleno.',g:['Réveillon de Copacabana','Nordeste animado'],w:['Tudo caríssimo','Chuvas de verão']}},
+
+  franca:{jan:{r:'🟡',t:'Inverno parisiense',d:'Museus sem fila, bistrôs aconchegantes. Frio (2–7°C).',g:['Museus sem filas','Preços baixos','Atmosfera aconchegante'],w:['Dias curtos','Frio e cinza']},fev:{r:'🟡',t:'Carnaval de Nice',d:'Carnaval de Nice (maior da França). Paris fria.',g:['Carnaval de Nice','Preços baixos'],w:['Frio','Dias curtos']},mar:{r:'🟢',t:'Primavera chegando',d:'Flores no Luxembourg. Museus começam a lotar.',g:['Flores nos jardins','Dias maiores'],w:['Chuvas frequentes']},abr:{r:'🟢',t:'Primavera plena',d:'Paris na primavera — clichê que funciona.',g:['Clima perfeito (13–18°C)','Piqueniques no Luxembourg'],w:['Lotado nas atrações','Chuvas intermitentes']},mai:{r:'🟢',t:'Melhor mês',d:'Clima ótimo, dias longos, ainda sem pico de verão.',g:['Clima ideal','Dias longos','Roland Garros (tênis)'],w:['Feriados: lotado']},jun:{r:'🟢',t:'Verão começa',d:'Fête de la Musique (21/06). Calor agradável.',g:['Fête de la Musique','Dia mais longo','Clima perfeito'],w:['Turismo subindo']},jul:{r:'🟡',t:'Alta temporada',d:'Quatorze de Julho (Bastilha). Muito turista.',g:['Quatorze de Julho','Riviera','Festivais regionais'],w:['Paris superlotada','Calor (30–35°C)','Preços altos']},ago:{r:'🟡',t:'Parisienses viajam',d:'Paris cheia de turistas mas sem parisienses.',g:['Riviera na melhor época','Festivals no campo'],w:['Muitos restaurantes fechados','Calor intenso']},set:{r:'🟢',t:'Rentrée',d:'Parisienses voltam. Clima ameno, festivals de arte.',g:['Clima perfeito (18–24°C)','Festival de Outono','Vendanges (colheita)'],w:['Fashion Week: lotado']},out:{r:'🟢',t:'Outono dourado',d:'Folhas nos bulevares, luz cinematográfica.',g:['Luz de outono belíssima','Vinho novo','Menos turistas'],w:['Chuvas crescentes','Dias diminuindo']},nov:{r:'🟡',t:'Outono tardio',d:'Frio voltando. Mercados de Natal abrindo.',g:['Mercados de Natal chegando','Preços baixos'],w:['Dias curtos','Chuvoso']},dez:{r:'🟢',t:'Natal em Paris',d:'Champs-Élysées iluminados. Mercados de Natal.',g:['Iluminação natalina','Mercados de Natal','Atmosfera mágica'],w:['Muito frio','Lotado no final']}},
+
+  italia:{jan:{r:'🟡',t:'Baixa temporada',d:'Roma e Sul amenos (8–14°C). Norte frio com neve nos Alpes.',g:['Roma sem filas','Museus acessíveis','Preços baixos'],w:['Norte gelado','Veneza pode inundar']},fev:{r:'🟡',t:'Carnaval de Veneza',d:'Carnaval de Veneza (fevereiro) — máscaras e elegância.',g:['Carnaval de Veneza','Roma amena','Preços baixos'],w:['Frio no norte']},mar:{r:'🟢',t:'Primavera começa',d:'Flores na Toscana. Dias maiores.',g:['Toscana florindo','Roma ótima','Menos turistas'],w:['Chuvas em algumas regiões']},abr:{r:'🟢',t:'Primavera plena',d:'A mais bela estação na Itália — verdes, flores, céu azul.',g:['Toscana verde e florida','Roma esplêndida','Amalfi começa'],w:['Páscoa: Semana Santa lotadíssima','Preços altos na Páscoa']},mai:{r:'🟢',t:'Melhor mês',d:'Clima perfeito em todo o país. Amalfi e Sul ideais.',g:['Clima ideal (18–24°C)','Amalfi perfeita','Menos turistas que verão'],w:['Começando a encher']},jun:{r:'🟢',t:'Verão começa',d:'Calor agradável. Sol garantido.',g:['Sol garantido','Gelato na rua','Praias do sul abertas'],w:['Alta temporada começa','Veneza superlotada']},jul:{r:'🟡',t:'Alta temporada',d:'Calor intenso (35°C). Muito turista.',g:['Praias da Sicília e Sardenha','Festival de Spoleto','Festas locais'],w:['Roma quente e lotada','Veneza insuportável','Preços máximos']},ago:{r:'🟡',t:'Férias de agosto',d:'Ferragosto (15/08) — italianos vão à praia. Cidades vazias.',g:['Praias no auge','Sicília e Sardenha animadas'],w:['Cidades históricas fechadas','Calor extremo (38°C)']},set:{r:'🟢',t:'Melhor mês',d:'O melhor mês para a Itália. Calor ameno, sem multidões.',g:['Clima perfeito (22–28°C)','Vendemmia (colheita de uva)','Menos lotado'],w:['Preços ainda altos no início']},out:{r:'🟢',t:'Outono da Toscana',d:'Folhas na Toscana, trufas em Alba, vinho novo.',g:['Toscana com folhas douradas','Trufas brancas de Alba','Roma sem filas'],w:['Chuvas crescentes']},nov:{r:'🟡',t:'Baixa temporada',d:'Frio. Veneza pode ter acqua alta.',g:['Preços baixos','Museus sem filas'],w:['Acqua alta em Veneza','Frio e chuvas']},dez:{r:'🟢',t:'Natal italiano',d:'Presepi (presépios), mercados de Natal, Roma decorada.',g:['Atmosfera natalina encantadora','Preços acessíveis','Vaticano na Missa do Galo'],w:['Frio','Lotado entre Natal e Ano Novo']}},
+
+  espanha:{jan:{r:'🟡',t:'Inverno',d:'Sul (Málaga, Sevilha) ameno (14°C). Norte e centro frio.',g:['Sul perfeito no inverno','Preços baixos','Museus acessíveis'],w:['Madri e norte frios','Dias curtos']},fev:{r:'🟡',t:'Carnaval',d:'Carnaval de Tenerife e Cádiz — espetaculares.',g:['Carnaval de Tenerife','Carnaval de Cádiz','Sul ameno'],w:['Frio no norte']},mar:{r:'🟢',t:'Las Fallas',d:'Festival Las Fallas em Valencia (15–19/03) — fogo e arte.',g:['Las Fallas (Valencia)','Clima agradável','Flores na Andaluzia'],w:['Valencia lotada nas Fallas']},abr:{r:'🟢',t:'Semana Santa e Feria',d:'Semana Santa de Sevilha é a mais impressionante do mundo.',g:['Semana Santa (Sevilha)','Feria de Abril','Tapas nos terraços'],w:['Sevilha lotada e cara na Semana Santa']},mai:{r:'🟢',t:'Melhor mês',d:'Clima ideal. Festas locais. Antes da alta temporada.',g:['Clima perfeito (20–25°C)','San Isidro (Madri)','Prado sem filas longas'],w:['Começando a lotar']},jun:{r:'🟢',t:'Verão começa',d:'Calor mas ainda suportável. São João (23/06).',g:['Fogueiras de São João','Praias abertas','Dias longuíssimos'],w:['Alta temporada começa','Preços subindo']},jul:{r:'🟡',t:'Alta temporada',d:'San Fermín (Pamplona, 7/07). Calor intenso.',g:['San Fermín','Praias do Mediterrâneo','Festivais por todo país'],w:['Madri pode bater 40°C','Tudo caro e lotado']},ago:{r:'🟡',t:'Verão pleno',d:'Férias espanholas. Praias lotadas.',g:['Praias do norte (fresca)','Festas locais'],w:['Calor extremo (40°C) no interior','Turismo no pico']},set:{r:'🟢',t:'Melhor mês',d:'Setembro é excelente. La Tomatina e Vendimia.',g:['La Tomatina (Buñol)','Vindimas (La Rioja)','Clima ótimo sem multidão'],w:['Início ainda lotado']},out:{r:'🟢',t:'Outono',d:'Perfeito para Andaluzia e interior. Festas de outono.',g:['Andaluzia excelente','Pilar (Zaragoza)','Menos turistas'],w:['Norte com chuvas']},nov:{r:'🟡',t:'Outono tardio',d:'Frio chegando no norte. Sul ainda ameno.',g:['Sul e Canárias ótimos','Preços baixos'],w:['Norte e Madrid frios']},dez:{r:'🟢',t:'Natal espanhol',d:'Luzes de Natal em Madrid. Iluminação de Vigo.',g:['Iluminação natalina de Madri','Mercados de Natal','Canárias com sol'],w:['Frio no centro e norte']}},
+
+  portugal:{jan:{r:'🟡',t:'Inverno ameno',d:'Portugal tem o inverno mais suave da Europa (12–15°C em Lisboa).',g:['Lisboa sem turistas','Surf no Algarve','Museus tranquilos'],w:['Chuvas frequentes','Dias curtos']},fev:{r:'🟡',t:'Inverno / Carnaval',d:'Carnaval em Torres Vedras e Loule. Ainda frio.',g:['Carnaval regional','Ameixeiras em flor no Alentejo'],w:['Chuvoso','Frio']},mar:{r:'🟢',t:'Primavera',d:'Flores por todo o país. Dias maiores.',g:['Flores silvestres','Clima agradável','Preços baixos'],w:['Chuvas ainda possíveis']},abr:{r:'🟢',t:'Primavera plena',d:'Portugal na melhor estação. Tudo verde e florido.',g:['Clima ideal (18–22°C)','Turismo ainda baixo','Loulé: Algarve florido'],w:['Semana Santa lotada']},mai:{r:'🟢',t:'Melhor mês',d:'O melhor mês para Portugal.',g:['Clima perfeito','Festas de Lisboa chegando','Menos turistas que verão'],w:['Começando a lotar']},jun:{r:'🟢',t:'Festas de Lisboa',d:'Santos Populares (12–13/06) — Lisboa em festa total.',g:['Festas de Lisboa (13/06)','Festas do Porto (23/06)','Clima quente e seco'],w:['Lisboa superlotada nos Santos']},jul:{r:'🟡',t:'Alta temporada',d:'Calor seco (30–35°C). Muito turista.',g:['Algarve na melhor época','NOS Alive festival','Praias perfeitas'],w:['Lisboa cara e lotada','Calor intenso']},ago:{r:'🟡',t:'Verão pleno',d:'Pico do verão. Fado, praia e cerveja.',g:['Praias do Algarve','Noites de fado animadas'],w:['Preços altos','Muito turista']},set:{r:'🟢',t:'Melhor mês',d:'Setembro é excelente — ainda quente, menos turistas.',g:['Clima ótimo (24–28°C)','Sintra sem fila','Preços caindo'],w:['Início ainda pode ser caro']},out:{r:'🟢',t:'Outono',d:'Vindimas no Douro. Perfeito para Porto.',g:['Vindimas no Vale do Douro','Porto no outono','Menos turistas'],w:['Chuvas no norte']},nov:{r:'🟡',t:'Outono tardio',d:'Frio chegando. Lisboa ainda agradável.',g:['Lisboa amena','Preços baixos','Museus livres'],w:['Chuvas','Dias curtos']},dez:{r:'🟢',t:'Natal em Portugal',d:'Decorações em Lisboa e Porto. Mercados de Natal.',g:['Natal encantador','Iluminação de Lisboa','Preços acessíveis'],w:['Chuvas','Dias curtos']}},
+
+  noruega:{jan:{r:'🟢',t:'Aurora Boreal',d:'O melhor mês para ver aurora boreal em Tromsø.',g:['Aurora Boreal (pico da temporada)','Ski','Noite polar'],w:['Frio extremo (-15°C no norte)','Dias muito curtos']},fev:{r:'🟢',t:'Aurora e Neve',d:'Aurora boreal até março. Ski e paisagens nevadas.',g:['Aurora Boreal','Ski world class','Paisagem nevada'],w:['Frio intenso','Neve nas estradas']},mar:{r:'🟢',t:'Últimas auroras',d:'Última chance de aurora. Luz do dia voltando.',g:['Aurora boreal até meados','Ski excelente','Mais horas de luz'],w:['Frio persistente']},abr:{r:'🟡',t:'Primavera',d:'Neve derretendo. Fiordes começam a ficar verdes.',g:['Paisagem de degelo','Primeiras flores árticas'],w:['Tempo instável','Neve nas montanhas']},mai:{r:'🟢',t:'17 de Maio',d:'Dia da Constituição (17/05) — a maior festa nacional da Noruega.',g:['Dia Nacional (17/05)','Flores nos fiordes','Luz do dia crescendo'],w:['Pode chover']},jun:{r:'🟢',t:'Sol da meia-noite',d:'Sol da meia-noite acima do Ártico — fenômeno inesquecível.',g:['Sol da meia-noite (Tromsø, Lofoten)','Caminhadas nos fiordes','Clima perfeito para Flåm'],w:['Muito turista']},jul:{r:'🟢',t:'Verão nórdico',d:'Pico do verão. Clima ameno (18–22°C), fiordes belíssimos.',g:['Fiordes no auge','Caminhadas Lofoten','Tudo aberto'],w:['Alta temporada: caro e lotado']},ago:{r:'🟢',t:'Verão pleno',d:'Excelente para caminhadas. Dias longos ainda.',g:['Caminhadas nos fiordes','Dias longos','Frutas silvestres (mirtilos)'],w:['Chuvas possíveis']},set:{r:'🟢',t:'Outono nórdico',d:'Folhas douradas nos fiordes. Menos turistas.',g:['Folhas douradas','Menos turistas','Auroras começando no norte'],w:['Frio chegando','Chuvas']},out:{r:'🟢',t:'Aurora Boreal começa',d:'Auroras boreais voltam. Paisagem de outono.',g:['Aurora Boreal (Tromsø)','Menos turistas','Preços caindo'],w:['Frio (5–10°C)','Chuvas']},nov:{r:'🟡',t:'Polar Night chegando',d:'Noite polar no extremo norte. Aurora ativa.',g:['Aurora Boreal ativa','Noite polar única','Cidades com iluminação'],w:['Muito frio','Dias curtos']},dez:{r:'🟡',t:'Inverno polar',d:'Noite polar. Aurora máxima. Natal nórdico.',g:['Aurora Boreal','Natal nórdico tradicional','Mercados de Natal'],w:['Frio extremo','-20°C no norte']}},
+
+  islandia:{jan:{r:'🟢',t:'Aurora Boreal máxima',d:'A melhor época para aurora. Noites longas.',g:['Aurora Boreal espetacular','Preços baixos','Menos turistas'],w:['Frio (-5 a 2°C)','Tempestades possíveis','Dias curtíssimos']},fev:{r:'🟢',t:'Aurora e Inverno',d:'Aurora ainda ativa. Paisagens nevadas surreais.',g:['Aurora Boreal','Geysers nevados','Cachoeiras congeladas'],w:['Estradas fechadas possíveis','Frio']},mar:{r:'🟢',t:'Transição',d:'Dias maiores. Últimas auroras. Menos turistas.',g:['Últimas auroras','Dias crescendo','Preços baixos'],w:['Tempo imprevisível','Neve ainda']},abr:{r:'🟢',t:'Primavera ártica',d:'Neve derretendo, puffins chegando no final.',g:['Puffins chegando (final de abril)','Menos turistas','Paisagem dramática'],w:['Tempo instável','Neve nas montanhas']},mai:{r:'🟢',t:'Primavera',d:'Puffins, flores árticas, dias longos.',g:['Puffins','Flores lupino','Dias longos'],w:['Ainda frio']},jun:{r:'🟢',t:'Solstício de Verão',d:'Sol da meia-noite. O país mais bonito do mundo.',g:['Sol 24 horas','Todas as estradas abertas','Caminhadas no Highlands'],w:['Alta temporada começa','Preços altos']},jul:{r:'🟢',t:'Verão islandês',d:'O melhor mês. Tudo aberto, sol 22h.',g:['Música e festivais','Caminhadas no interior (Highlands)','Baleia-watching'],w:['Mais caro e lotado']},ago:{r:'🟢',t:'Final do verão',d:'Ainda sol 18h. Puffins antes de partir.',g:['Puffins ainda lá','Sol abundante','Bagas silvestres'],w:['Começa a esfriar']},set:{r:'🟢',t:'Outono e auroras',d:'Auroras voltam. Poucas pessoas. Excelente!',g:['Aurora Boreal voltando','Menos turistas','Preços caindo'],w:['Dias diminuindo','Estradas do interior fechando']},out:{r:'🟡',t:'Aurora ativa',d:'Aurora forte. Frio voltando. Interior fechado.',g:['Aurora Boreal frequente','Preços baixos'],w:['Interior (Highlands) fechado','Frio e chuvas']},nov:{r:'🟡',t:'Inverno começa',d:'Noites longas. Aurora ativa. Poucas pessoas.',g:['Aurora Boreal','Banho termal (Blue Lagoon) agradável'],w:['Frio','Tempestades']},dez:{r:'🟢',t:'Natal ártico',d:'Aurora máxima. Reykjavik decorada. Experiência única.',g:['Aurora Boreal espetacular','Natal em Reykjavik','Blue Lagoon na neve'],w:['Frio (-3 a 3°C)','Tempestades possíveis']}},
+
+  australia:{jan:{r:'🟡',t:'Verão australiano',d:'Calor intenso (35–40°C). Great Barrier Reef na melhor época.',g:['Great Barrier Reef (visibilidade máxima)','Byron Bay animada','Capricorn (mergulho)'],w:['Sydney e Melbourne quentes (38°C)','Ciclones no norte','Jellyfish perigosos em Queensland']},fev:{r:'🟡',t:'Verão pleno',d:'Calor e possibilidade de tempestades. Queensland tem ciclones.',g:['Tasmania agradável no verão','Southern Ocean perfeito'],w:['Calor extremo','Ciclones norte']},mar:{r:'🟢',t:'Outono começa',d:'Temperatura caindo. Excelente para Sydney e Melbourne.',g:['Melbourne: clima perfeito','Sydney: temperatura amena','Red Centre (Uluru) menos quente'],w:['Calor ainda em Queensland']},abr:{r:'🟢',t:'Outono',d:'Ótimo para todo o país. Tão bom quanto setembro.',g:['Uluru e Red Centre perfeitos','Melbourne agradável','Flores no Sul'],w:['Páscoa: lotado']},mai:{r:'🟢',t:'Outono/Inverno',d:'Perfeito para o Outback e interior. Fresco no sul.',g:['Uluru e Outback excelente','Kakadu no início da seca','Perth com flores de Kings Park'],w:['Noites frias no interior']},jun:{r:'🟢',t:'Inverno australiano',d:'Temporada de baleias começa. Ótimo para norte.',g:['Baleias (jun-nov) em toda costa','Kakadu Wildlife na seca','Darwin e Kimberley perfeitos'],w:['Sul fica frio (10°C)','Ski nas Alpes australianos']},jul:{r:'🟢',t:'Inverno seco',d:'O melhor mês para o norte tropical. Ski no sul.',g:['Tropical North Queensland perfeito','Darwin Festival','Baleias corcundas'],w:['Sul frio (inverno)']},ago:{r:'🟢',t:'Pico do inverno',d:'Outback e norte no auge. Baleias.',g:['Baleias (pico da temporada)','Outback excelente','Darwin incrível'],w:['Frio no sul (8°C)']},set:{r:'🟢',t:'Primavera australiana',d:'Um dos melhores meses. Flores no WA.',g:['Wildflowers no Western Australia (espetacular)','Clima perfeito em todo sul','Baleias ainda'],w:['Primeiros dias quentes']},out:{r:'🟢',t:'Primavera',d:'Ótimo para Sydney. Flores e calor ameno.',g:['Sydney perfeita','Melbourne animada','Flores continuam'],w:['Queensland com calor voltando']},nov:{r:'🟡',t:'Verão chegando',d:'Calor aumentando. Baleias partindo.',g:['Sul ainda agradável','Reef começa a aquecer'],w:['Norte com calor e umidade','Monção chegando']},dez:{r:'🟡',t:'Verão',d:'Natal na praia. Calor pleno.',g:['Natal na praia (tradição australiana)','Fogos do Ano Novo no Sydney Harbour'],w:['Calor intenso','Bushfire season']}},
+
+  marrocos:{jan:{r:'🟢',t:'Melhor mês',d:'Clima ideal para Marrakech e cidades imperiais (15–20°C).',g:['Médinas sem calor sufocante','Deserto do Saara com dias quentes e noites frias','Ski nas montanhas Atlas'],w:['Noites frias (5°C)','Neve no Atlas']},fev:{r:'🟢',t:'Flores e frio',d:'Amendoeiras em flor no Atlas. Clima agradável.',g:['Amendoeiras florescendo','Clima perfeito','Deserto acessível'],w:['Noites frias ainda']},mar:{r:'🟢',t:'Primavera',d:'Temperatura perfeita. Rosas começando no Vale das Rosas.',g:['Vale das Rosas (final de março/abril)','Clima perfeito (20–25°C)','Menos turistas'],w:['Ramadã pode ocorrer (data varia)']},abr:{r:'🟢',t:'Vale das Rosas',d:'Festival das Rosas em Kelaa M\'Gouna (maio). Perfeito.',g:['Festival das Rosas','Clima ideal','Chefchaouen deslumbrante'],w:['Ramadã pode ocorrer','Algum calor no deserto']},mai:{r:'🟢',t:'Festival das Rosas',d:'O evento cultural mais fascinante do Marrocos.',g:['Festival das Rosas (Kelaa M\'Gouna)','Clima perfeito','Fes menos lotado'],w:['Calor no deserto (35°C)']},jun:{r:'🟡',t:'Calor chegando',d:'Cidades do interior ficam quentes.',g:['Costa atlântica (Essaouira) perfeita','Casablanca agradável'],w:['Marrakech quente (38°C)','Interior muito quente']},jul:{r:'🟡',t:'Verão quente',d:'Marrakech pode atingir 42°C.',g:['Costa atlântica ótima','Agadir e Essaouira com brisa'],w:['Interior insuportável (40–45°C)','Ramadã pode ocorrer']},ago:{r:'🟡',t:'Verão pleno',d:'O mês mais quente. Costa é o refúgio.',g:['Praias atlânticas','Surf em Taghazout'],w:['Interior extremamente quente','Turismo europeu no pico']},set:{r:'🟢',t:'Final do verão',d:'Calor caindo. Excelente para retomar as cidades.',g:['Cidades imperiais voltam ao normal','Deserto perfeito','Menos turistas'],w:['Ainda quente no início']},out:{r:'🟢',t:'Melhor mês',d:'Temperatura perfeita. O melhor mês para o deserto.',g:['Deserto do Saara perfeito (25°C)','Tâmaras na colheita','Fes e Marrakech ótimas'],w:['Pode chover no Atlas']},nov:{r:'🟢',t:'Excelente',d:'Ótimo para todas as cidades imperiais e deserto.',g:['Clima perfeito (18–22°C)','Menos turistas','Deserto excelente'],w:['Noites frias no deserto']},dez:{r:'🟢',t:'Inverno ameno',d:'Melhor mês para o Marrocos — inverno europeu, primavera marroquina.',g:['Clima ideal','Neve no Atlas (ski!)','Médinas animadas'],w:['Noites frias (5°C)','Neve pode fechar estradas no Atlas']}},
+
+  egito:{jan:{r:'🟢',t:'Melhor época',d:'Clima perfeito (20–25°C). Alta temporada.',g:['Pirâmides sem calor','Cruzeiro no Nilo','Luxor perfeito'],w:['Alta temporada: caro','Lotado']},fev:{r:'🟢',t:'Alta temporada',d:'Ainda ótimo. Dias ensolarados e amenos.',g:['Clima ideal','Mergulho em Hurghada','Deslumbrante no deserto'],w:['Caro']},mar:{r:'🟢',t:'Primavera',d:'Temperatura subindo. Excelente ainda.',g:['Clima ótimo (25–30°C)','Menos turistas'],w:['Khamsin (vento de areia) possível']},abr:{r:'🟢',t:'Primavera quente',d:'Calor crescente mas ainda tolerável.',g:['Praias do Mar Vermelho ótimas','Dias longos'],w:['Cairo quente (32°C)','Vento de areia']},mai:{r:'🟡',t:'Calor crescente',d:'Calor aumentando. Início da época quente.',g:['Mar Vermelho (mergulho) ótimo','Noites agradáveis'],w:['Dia a 38°C','Calor crescente']},jun:{r:'🟡',t:'Verão quente',d:'Cairo chega a 40°C. Apenas Mar Vermelho e Alexandria.',g:['Mar Vermelho (mergulho)','Alexandria mais fresca (brisa do Mediterrâneo)'],w:['Calor extremo (38–42°C)','Turistas poucos']},jul:{r:'🟡',t:'Pico do calor',d:'O mês mais quente. Quase só turistas de mergulho.',g:['Mergulho no Mar Vermelho','Preços baixos'],w:['42–45°C no Cairo','Impraticável para turismo cultural']},ago:{r:'🟡',t:'Calor extremo',d:'Continuação do calor intenso.',g:['Mar Vermelho para mergulho','Preços baixos'],w:['40–45°C','Quase inabitável para turismo']},set:{r:'🟡',t:'Calor cedendo',d:'Temperatura caindo mas ainda quente.',g:['Calor diminuindo','Boa visibilidade no mar'],w:['Ainda 35–38°C no Cairo']},out:{r:'🟢',t:'Temporada começa',d:'Alta temporada retomada. Temperatura agradável.',g:['Clima ótimo (28–32°C)','Cruzeiro no Nilo','Abu Simbel'],w:['Turismo voltando = preços subindo']},nov:{r:'🟢',t:'Alta temporada',d:'Excelente para todo o Egito.',g:['Clima perfeito','Abu Simbel Festival (22/10 e 22/02)','Cruzeiro no Nilo'],w:['Preços altos']},dez:{r:'🟢',t:'Melhor época',d:'O mês ideal para o Egito.',g:['Clima perfeito (20–25°C)','Pirâmides sem calor','Luxor e Assuã ótimos'],w:['Alta temporada','Lotado nos feriados']}},
+
+  _default:{jan:{r:'🟡',t:'Inverno',d:'Verifique o clima local para este destino.',g:['Preços baixos em muitos destinos','Menos turistas'],w:['Verifique temperatura e chuvas']},fev:{r:'🟡',t:'Inverno tardio',d:'',g:['Carnaval em destinos mediterrâneos','Preços baixos'],w:['Frio em destinos do norte']},mar:{r:'🟢',t:'Primavera',d:'Início de primavera — boa época para viajar.',g:['Clima agradável','Menos turistas que verão'],w:['Chuvas possíveis']},abr:{r:'🟢',t:'Primavera plena',d:'',g:['Flores e jardins','Clima ótimo'],w:['Páscoa pode ser lotada']},mai:{r:'🟢',t:'Primavera/Verão',d:'',g:['Clima ideal','Dias longos'],w:['Turismo aumentando']},jun:{r:'🟢',t:'Início do verão',d:'',g:['Clima quente','Dias longos'],w:['Alta temporada começa']},jul:{r:'🟡',t:'Alta temporada',d:'',g:['Todos os eventos acontecem'],w:['Tudo lotado e caro']},ago:{r:'🟡',t:'Alta temporada',d:'',g:['Sol garantido'],w:['Preços altos','Multidões']},set:{r:'🟢',t:'Final do verão',d:'',g:['Ainda quente','Menos turistas','Preços caindo'],w:['Tempo pode ser instável']},out:{r:'🟢',t:'Outono',d:'',g:['Folhagem','Menos turistas'],w:['Dias ficando curtos']},nov:{r:'🟡',t:'Outono tardio',d:'',g:['Preços baixos'],w:['Dias curtos','Chuvoso']},dez:{r:'🟢',t:'Natal',d:'',g:['Natal e Ano Novo'],w:['Preços altos no final','Frio']}},
+};
+
+// ══════════════════════════════════════════════════════════════
+// ATIVIDADES — banco de roteiros
+// ══════════════════════════════════════════════════════════════
+const ACT_DB = {
+  japao:['Senso-ji (Asakusa) — templo mais antigo de Tóquio|Chegue antes das 9h para ver o incenso e os fiéis.|🌸 Pico do sakura ao redor em abril',
+    'Shibuya Crossing — o cruzamento mais movimentado do mundo|Veja do Starbucks do 2º andar às 18h.',
+    'Fushimi Inari (Kyoto) — torii laranja|Chegue às 6h para ver na névoa. Mais de 5.000 portões.',
+    'Kinkaku-ji (Kyoto) — Pavilhão Dourado|Reflexo perfeito às manhãs de sol.|❄️ Com neve é uma das fotos mais icônicas do mundo',
+    'Tsukiji Market — sushi fresquíssimo|Melhor café da manhã do planeta: omakase às 7h.',
+    'Nishiki Market (Kyoto) — o supermercado medieval|100 barracas de tofu, pickle, mochi e tempurá.',
+    'Arashiyama — Floresta de Bambu|Vá antes das 8h. Bambus de 15m que rangem no vento.|🌸 Cerejeiras no rio Oi em março-abril',
+    'Monte Fuji — nascer do sol (Gotemba Trail)|Subida noturna para ver o hinode (nascer do sol) do cume.|❄️ Neve perfeita de novembro a maio',
+    'Teamlab Borderless (Tóquio) — arte digital imersiva|Reserve com semanas de antecedência.',
+    'Nara — cervos sagrados livres|Os shika (cervos) andam livremente pelas ruas da cidade.|🍂 Gingko dourado em novembro',
+    'Onsen em Hakone — banho termal com vista do Fuji|Ryokan tradicional com yukata e kaiseki.',
+    'Gion (Kyoto) — bairro das gueixas|Maiko aparecem no Hanamikoji após 17h.',
+    'Hiroshima Memorial da Paz — museu emocionante|Experiência necessária e profunda.',
+    'Ilha de Miyajima — torii sobre o mar|Veja na maré alta (confirme horário no dia).|🌸 Cerejeiras na ilha em abril',
+    'Dotonbori (Osaka) — neon e comida de rua|Takoyaki, kushikatsu e ramen de madrugada.',
+    'Shinjuku Golden Gai — 200 bares minúsculos|Cada bar tem 6 lugares e uma vibe única.',
+    'Templo Tōdai-ji (Nara) — maior edifício de madeira do mundo|Buda de bronze de 15m dentro.',
+    'Nikko — Tōshō-gū e catarata Kegon|80m de queda. Os 3 macacos sábios.|🍂 Folhas vermelhas em outubro',
+    'Castelo de Osaka — símbolo da cidade|Vista panorâmica do topo.',
+    'Pontocho (Kyoto) — beco de restaurantes|Kaiseki sobre o rio Kamo ao entardecer.'],
+
+  china:['Grande Muralha (Mutianyu) — menos turistas que Badaling|Vá na abertura. Teleférico ou subida a pé.|🍂 Folhas vermelhas no outono',
+    'Cidade Proibida (Pequim) — 9.999 salas|Reserve ingressos online. Reserve 3h.',
+    'Templo do Céu (Pequim) — altar imperial ao sol|Idosos praticando Tai Chi de manhã.',
+    'Exército de Terracota (Xi\'an) — 8.000 guerreiros únicos|O mais impressionante museu da história humana.',
+    'Li River Cruise (Guilin) — paisagem da nota de 20 yuans|Barco de Guilin a Yangshuo entre os karsts.',
+    'Pandas em Chengdu — abraçar um filhote|Chegue às 8h para vê-los ativos e comendo.',
+    'Bund de Xangai — skyline futurista|Vista do Pudong ao entardecer é de outro mundo.',
+    'Frente de Água de Xangai — museus e arquitetura colonial|Arte Contemporânea no Museum of Art Pudong.',
+    'Tianmen Mountain (Zhangjiajie) — Avatar na vida real|As montanhas que inspiraram Pandora.',
+    'Lijiang Old Town — cidade patrimônio UNESCO|Canais e telhados curvos da arquitetura Naxi.|🌸 Flores de ameixa no inverno',
+    'Tiger Leaping Gorge (Yunnan) — trilha de 2 dias|Um dos mais belos trekking da Ásia.',
+    'Mosteiro de Sera (Lhasa, Tibet) — debate monástico|Monges debatem filosofia budista às 15h.',
+    'Karst de Zhangjiajie — Montanhas do Avatar|Teleférico mais longo do mundo até o topo.',
+    'Bairro Francês de Xangai (Tianzifang) — arte e café|Becos art nouveau com galerias e boutiques.',
+    'Night Market de Xi\'an (Huimin Street) — comida halal|Roujiamo (hambúrguer árabe), espetinhos de cordeiro.',
+    'Lago Oeste de Hangzhou — poesia em forma de água|Caminhe pelas pontes e pavilhões ao amanhecer.',
+    'Hong Kong — skyline e dim sum|Victoria Peak de noite. Dim sum às 7h no Tim Ho Wan.',
+    'Suzhou — jardins clássicos UNESCO|O jardim Humble Administrator é de uma beleza indescritível.',
+    'Templo Shaolin (Dengfeng) — berço do kung fu|Monges praticando artes marciais ao amanhecer.',
+    'Deserto de Gobi (Dunhuang) — dunas de ouro|Camelo ao por do sol no Crescent Moon Lake.'],
+
+  india:['Taj Mahal (Agra) — amanhecer|Chegue antes das 6h para a luz dourada. Sem fila, sem multidão.|🌸 Flores em março-abril',
+    'Old Delhi — Chandni Chowk e especiarias|Mercado de especiarias, chaat e rickshaw pelo caos.',
+    'Jaipur — Palácio dos Ventos e Forte Amber|Elefantes na subida (ou jeep) ao Forte.|🎆 Diwali em outubro-novembro transforma a cidade',
+    'Varanasi — Ghats do Ganges ao amanhecer|A cidade mais antiga do mundo. Cerimônia Aarti ao entardecer.',
+    'Kerala — Houseboats nos Backwaters|1 ou 2 noites em houseboat nos canais.|☀️ Inverno (dez-mar) é perfeito',
+    'Goa — praias e igrejas barrocas|Basilica do Bom Jesus tem as relíquias de São Francisco Xavier.',
+    'Mehrangarh (Jodhpur) — fortaleza azul|A mais impressionante fortaleza da Índia. Vista da cidade azul.',
+    'Udaipur — cidade nos lagos|O palácio flutuante Lake Palace e o pôr do sol no Pichola.',
+    'Hampi — ruínas do Império Vijayanagar|Pedras milenares e paisagem de tirar o fôlego.',
+    'Rishikesh — capital mundial do yoga|Rafting no Ganges e yoga nas ashrams.',
+    'Meditação em Dharamsala (McLeod Ganj)|Ensinamentos do Dalai Lama (quando em residência).',
+    'Jardins Moguls de Srinagar (Kashmir)|Paisagem mais bonita da Índia em shikaras no Dal Lake.',
+    'Templo Dourado de Amritsar (Harmandir Sahib)|Aberto 24h. Langar (refeição gratuita) para 100.000 pessoas/dia.',
+    'Ajanta e Ellora — pinturas budistas rupestres|Paciência: tudo fica 1h de Aurangabad.',
+    'Deserto de Thar (Jaisalmer) — camelo e estrelas|Noite em acampamento no deserto com música folk.'],
+
+  brasil_country:['Cristo Redentor (Rio de Janeiro)|Primeiro trem (8h) para ver sem névoa e sem multidão.|🌞 Maio: os melhores dias límpidos',
+    'Pão de Açúcar (Rio de Janeiro)|Bondinho duplo. A vista definitiva do Rio.',
+    'Ipanema ao pôr do sol|Pedra do Arpoador — aplausos ao sol que some.',
+    'Carnaval do Rio (Sambódromo)|A maior espetáculo da Terra. Reserve ingressos com meses.|🎭 Fevereiro/março',
+    'Cataratas do Iguaçu (lado brasileiro)|275 quedas de água. Trilha da Garganta do Diabo.|💧 Agosto: nível máximo',
+    'Lençóis Maranhenses — lagoas turquesa|Só de maio a setembro ficam cheias. Única no mundo.',
+    'Floresta Amazônica (Manaus)|Tour de 3+ dias no rio Negro com guia local.',
+    'Bonito (Mato Grosso do Sul)|Flutuação em rio de água cristalina com peixes coloridos.',
+    'Chapada Diamantina (BA)|Cachoeiras e trilhas na caatinga e cerrado baiano.',
+    'Fernando de Noronha|As mais belas praias do Brasil. Limite de turistas.|🐋 Agosto-outubro: golfinhos e raias',
+    'Pelourinho (Salvador)|O maior conjunto barroco das Américas. Capoeira ao vivo.',
+    'Réveillon de Copacabana|3 milhões de pessoas de branco. Fogos sobre o mar.|🎆 31 de dezembro',
+    'Pantanal (Cuiabá/Corumbá)|A maior área úmida do mundo. Onças, capivaras, tuiuiús.|🦁 Julho-setembro: fauna concentrada',
+    'Samba na Lapa (Rio)|Rio Scenarium ou Carioca da Gema até 4h da manhã.',
+    'Mercado Ver-o-Peso (Belém)|O mercado mais exótico do Brasil. Pato no tucupi e açaí puro.'],
+
+  // DEFAULT PARA PAÍSES SEM BANCO ESPECÍFICO
+  _default:['Centro histórico — explore as ruas milenares|Caminhe sem destino fixo. As melhores descobertas são acidentais.',
+    'Museu Nacional — história e cultura local|Reserve ao menos 2-3 horas para a exposição principal.',
+    'Mercado tradicional — gastronomia local|Experimente os sabores que não existem no resto do mundo.',
+    'Ponto mais alto da cidade — vista panorâmica|Amanhecer ou pôr do sol com a cidade a seus pés.',
+    'Bairro histórico antigo — arquitetura original|As ruas que sobreviveram ao tempo contam a melhor história.',
+    'Parque ou jardim central — pausa e contemplação|Observe como os locais vivem e se relacionam.',
+    'Restaurante tradicional — prato típico da região|Peça o prato que mais assusta no cardápio. Raramente decepciona.',
+    'Passeio de barco ou balsa — perspectiva diferente|Ver a cidade da água muda tudo.',
+    'Galeria de arte — criatividade local|Arte contemporânea local é o retrato mais honesto de uma cultura.',
+    'Mercado noturno — vida local à noite|A verdadeira vida de um lugar começa quando os turistas dormem.',
+    'Monumento icônico — o cartão-postal|Chegue 1 hora antes do horário popular para a luz certa.',
+    'Área natural próxima — parque ou trilha|A natureza ao redor de uma cidade diz tanto quanto suas ruas.',
+    'Feira de artesanato — cultura material|Compre direto do artesão — a história do objeto vem de graça.',
+    'Templo, mesquita ou catedral principal|Independente da crença, a arquitetura sagrada é a mais sincera.',
+    'Bairro bohemio — arte e café|Onde os artistas moram, a cidade está no seu melhor.'],
+};
+
+// Mapa de key para banco de atividades
+const ACT_MAP = {
+  japao:'japao', china:'china', india:'india', brasil:'brasil_country',
+};
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let mode='country', selectedMonth=null, selectedDays=7;
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  populateCountries();
+  buildMonthGrid();
+  updateDays(7);
+  document.getElementById('hdr-count').textContent = COUNTRIES.length+' países';
+});
+
+function populateCountries(){
+  const sel=document.getElementById('sel-country');
+  // Agrupar por continente
+  const continents={};
+  COUNTRIES.forEach(c=>{
+    if(!continents[c.continent]) continents[c.continent]=[];
+    continents[c.continent].push(c);
+  });
+  Object.keys(continents).sort().forEach(cont=>{
+    const og=document.createElement('optgroup');
+    og.label='── '+cont+' ──';
+    continents[cont].forEach(c=>{
+      const op=document.createElement('option');
+      op.value=c.k; op.textContent=c.name;
+      og.appendChild(op);
+    });
+    sel.appendChild(og);
+  });
+}
+
+function buildMonthGrid(){
+  const g=document.getElementById('month-grid');
+  g.innerHTML=MONTHS.map(m=>`<div class="month-btn" id="m-${m.k}" onclick="selectMonth('${m.k}')"><span class="m-icon">${m.icon}</span>${m.l}</div>`).join('');
+  const cur=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][new Date().getMonth()];
+  selectMonth(cur);
+}
+
+function selectMonth(k){
+  document.querySelectorAll('.month-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('m-'+k).classList.add('active');
+  selectedMonth=k;
+  updateSeasonHint();
+}
+
+function updateSeasonHint(){
+  const ck=document.getElementById('sel-country').value;
+  const hint=document.getElementById('season-hint');
+  if(!selectedMonth||!ck){hint.classList.remove('show');return;}
+  const sd=SEASONS[ck]||SEASONS._default;
+  const ms=sd[selectedMonth];
+  if(!ms){hint.classList.remove('show');return;}
+  hint.innerHTML=`<strong>${ms.r} ${ms.t}</strong><br>${ms.d||''}`;
+  hint.classList.add('show');
+}
+
+function updateDays(val){
+  selectedDays=parseInt(val);
+  document.getElementById('days-display').textContent=val+' dias';
+  const pct=((val-1)/29*100).toFixed(1);
+  document.getElementById('days-range').style.setProperty('--pct',pct+'%');
+}
+
+function setMode(m){
+  mode=m;
+  document.getElementById('tab-country').classList.toggle('active',m==='country');
+  document.getElementById('tab-city').classList.toggle('active',m==='city');
+  document.getElementById('field-city').style.display=m==='city'?'block':'none';
+  if(m==='city') updateCityList();
+}
+
+function onCountryChange(){
+  if(mode==='city') updateCityList();
+  updateSeasonHint();
+}
+
+function updateCityList(){
+  const ck=document.getElementById('sel-country').value;
+  const c=COUNTRIES.find(x=>x.k===ck);
+  const sel=document.getElementById('sel-city');
+  if(c&&c.cities.length){
+    sel.innerHTML=c.cities.map(ci=>`<option value="${ci}">${ci}</option>`).join('');
+  } else {
+    sel.innerHTML='<option value="">— Selecione o país primeiro —</option>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// GENERATE
+// ══════════════════════════════════════════════════════════════
+function generate(){
+  const ck=document.getElementById('sel-country').value;
+  const cv=document.getElementById('sel-city').value;
+  const err=document.getElementById('err-box');
+  err.classList.remove('show');
+  if(!ck){err.textContent='Selecione um país.';err.classList.add('show');return;}
+  if(mode==='city'&&!cv){err.textContent='Selecione uma cidade.';err.classList.add('show');return;}
+  if(!selectedMonth){err.textContent='Selecione o mês da viagem.';err.classList.add('show');return;}
+  document.getElementById('empty-state').style.display='none';
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('result').style.display='none';
+  const msgs=['Montando seu roteiro…','Analisando a estação…','Distribuindo as cidades…','Quase pronto!'];
+  let mi=0;
+  const iv=setInterval(()=>{document.getElementById('loading-msg').textContent=msgs[(++mi)%msgs.length];},1400);
+  setTimeout(()=>{clearInterval(iv);document.getElementById('loading').classList.remove('show');buildItinerary(ck,mode==='city'?cv:null,selectedDays,selectedMonth);document.getElementById('result').style.display='block';},1600);
+}
+
+// ══════════════════════════════════════════════════════════════
+// BUILD
+// ══════════════════════════════════════════════════════════════
+function buildItinerary(ck,cityFilter,days,month){
+  const countryObj=COUNTRIES.find(c=>c.k===ck)||{name:'Destino',cities:[],k:ck};
+  const flagChar=countryObj.name.match(/[\u{1F1E0}-\u{1F1FF}]{2}|[\u{1F3F4}]/u)?.[0]||'🌍';
+  const destName=cityFilter||countryObj.name.replace(/^[\u{1F1E0}-\u{1F1FF}]{2}\s*/u,'').replace(/^🏴[\S]*\s*/,'');
+  const sd=SEASONS[ck]||SEASONS._default;
+  const si=sd[month];
+
+  // Atividades
+  const actKey=ACT_MAP[ck]||'_default';
+  const rawActs=ACT_DB[actKey]||ACT_DB._default;
+  const acts=rawActs.map((a,i)=>{
+    const parts=a.split('|');
+    const nm=parts[0].split(' — ');
+    return {
+      name:nm[0].trim(),
+      place:nm[1]||'',
+      desc:parts[1]||'',
+      seasonal:parts[2]||null,
+      time:timeFor(i),
+    };
+  });
+
+  // Rota cidades (modo país)
+  let routeCities=[];
+  if(!cityFilter&&countryObj.cities.length>0){
+    const cities=[...countryObj.cities];
+    const maxCities=Math.min(cities.length,Math.ceil(days/2));
+    const usedCities=cities.slice(0,maxCities);
+    const dpc=Math.floor(days/usedCities.length);
+    let d=0;
+    usedCities.forEach((c,i)=>{
+      const dhere=i===usedCities.length-1?days-d:dpc;
+      routeCities.push({city:c,days:dhere,startDay:d+1});
+      d+=dhere;
+    });
+  }
+
+  // Construir dias
+  const DAY_TITLES=['Chegada & Primeiras Impressões','Cultura & Monumentos','Gastronomia & Mercados','Natureza & Paisagens','Arte & Museus','Bairros & Vida Local','Patrimônio Histórico','Excursão & Arredores','Relaxe & Contemplação','Experiência Local','Arquitetura & Beleza','Sabores & Tradições','Aventura & Natureza','Pôr do Sol & Contemplação','Artesanato & Compras','Espiritualidade & Templos','Rios & Ilhas','Montanhas & Trilhas','Culinária de Rua','Vila & Campo'];
+  const dayPlans=[];
+  for(let i=0;i<days;i++){
+    let cityOfDay=cityFilter||destName;
+    if(routeCities.length>1){
+      const rc=routeCities.find(r=>i+1>=r.startDay&&i+1<r.startDay+r.days);
+      if(rc) cityOfDay=rc.city;
+    }
+    const actsPerDay=Math.min(5,acts.length);
+    const si2=(i*actsPerDay)%acts.length;
+    const dayActs=[];
+    for(let j=0;j<actsPerDay;j++) dayActs.push(acts[(si2+j)%acts.length]);
+    dayPlans.push({day:i+1,city:cityOfDay,title:DAY_TITLES[i%DAY_TITLES.length],activities:dayActs});
+  }
+
+  renderResult(flagChar,destName,si,month,days,cityFilter,routeCities,dayPlans,ck);
+}
+
+function timeFor(i){
+  const times=['08:00','09:30','11:00','13:00','15:00','16:30','18:00','19:30','21:00'];
+  return times[i%times.length];
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════
+function renderResult(flag,name,si,month,days,cityFilter,routeCities,dayPlans,ck){
+  const scopeLabel=cityFilter?`Cidade: ${cityFilter}`:'País inteiro';
+  const countryObj=COUNTRIES.find(c=>c.k===ck);
+  const tips=[
+    'Pesquise os costumes locais antes de viajar — pequenos gestos abrem muitas portas.',
+    'Câmbio de moeda: prefira bancos ou caixas eletrônicos locais ao aeroporto.',
+    'Seguro viagem cobre cancelamentos, saúde e bagagem — sempre vale a pena.',
+    'Apps offline (Maps.me ou Google Maps offline) salvam em destinos sem sinal.',
+    'Leve roupas adequadas ao clima e costumes do destino — verifique antes de ir.',
+  ];
+
+  const routeHTML=routeCities.length>1?`<div class="route-bar">${routeCities.map((r,i)=>`<div class="route-stop"><div class="route-city ${i===0?'current':''}">${r.city} <span style="opacity:.6;font-weight:400">${r.days}d</span></div>${i<routeCities.length-1?'<div class="route-arrow">→</div>':''}</div>`).join('')}</div>`:'';
+
+  const seasonHTML=si?`<div class="season-card"><div class="season-icon">${si.r}</div><div><h3>${MN[month]} — ${si.t}</h3><p>${si.d||''}</p><div class="season-tips">${(si.g||[]).map(g=>`<span class="stip good">✓ ${g}</span>`).join('')}${(si.w||[]).map(w=>`<span class="stip warn">⚠ ${w}</span>`).join('')}</div></div></div>`:'';
+
+  const daysHTML=dayPlans.map((dp,di)=>`<div class="day-card" style="animation-delay:${di*.04}s"><div class="day-head"><div class="day-head-left"><span class="day-num">Dia ${dp.day}</span><span class="day-title">${dp.title}</span></div>${routeCities.length>1?`<span class="day-city-tag">📍 ${dp.city}</span>`:''}</div><div class="day-body">${dp.activities.map((a,ai)=>`<div class="act"><div class="act-time">${a.time}</div><div class="act-node"><div class="act-dot"></div>${ai<dp.activities.length-1?'<div class="act-line"></div>':''}</div><div class="act-content"><div class="act-name">${a.name}${a.place?` <span style="color:var(--muted);font-weight:400;font-size:.8rem">— ${a.place}</span>`:''}</div><div class="act-desc">${a.desc}</div>${a.seasonal?`<span class="act-note note-season">${a.seasonal}</span>`:''}</div></div>`).join('')}</div></div>`).join('');
+
+  const tipsHTML=`<div class="tips-section"><h3>✦ Dicas Essenciais</h3>${tips.map(t=>`<div class="tip-item">${t}</div>`).join('')}</div>`;
+
+  document.getElementById('result').innerHTML=`<div class="result-hdr"><div class="result-flag">${flag}</div><div class="result-info"><h1>${name}</h1><div class="result-meta"><span>${days} dias</span> · ${MN[month]} · ${scopeLabel}</div><div class="badges">${si?`<span class="badge badge-season">${si.r} ${si.t}</span>`:''}<span class="badge badge-days">📅 ${days} dias</span><span class="badge badge-scope">${cityFilter?'🏙 Cidade':'🌍 País'}</span>${si&&si.w&&si.w.length?`<span class="badge badge-warn">⚠ Atenção ao clima</span>`:''}</div></div></div>${seasonHTML}${routeHTML}<div class="days-grid">${daysHTML}</div>${tipsHTML}`;
+}
+</script>
+</body>
+</html>
