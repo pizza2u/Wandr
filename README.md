@@ -1,8 +1,5 @@
 # 🗺️ Wandr — Planejamento de Viagem Inteligente
 
-![Wandr Preview](https://via.placeholder.com/1200x600/0B0908/D4903A?text=Wandr+-+Planejamento+de+Viagem)
-*(Nota: Adicione aqui um print real da tela do seu projeto)*
-
 O **Wandr** é uma aplicação web "single-file" (HTML, CSS e JavaScript puros em um único arquivo) que gera roteiros de viagem dinâmicos baseados no destino, na quantidade de dias e no mês escolhido pelo usuário. 
 
 🧠 **Contexto do Projeto:** Este projeto foi criado como um experimento prático para testar as capacidades de geração de código e estruturação lógica do modelo de inteligência artificial **Claude**, utilizando uma abordagem de *few-shot prompting* (poucos comandos).
