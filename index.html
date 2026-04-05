@@ -183,7 +183,7 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 <div class="layout">
 <aside class="sidebar">
   <div class="sb-title">Monte seu roteiro</div>
-  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Modo offline por padrão. Você pode ativar busca online via Google Images (API).</strong></div>
+  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Modo híbrido: offline por padrão + busca online com Google Images API e assistente GPT opcional.</strong></div>
   <div class="field">
     <label>Modo de viagem</label>
     <div class="toggle-tabs">
@@ -230,6 +230,14 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
   <div class="field">
     <label>Google Search Engine ID / CX (opcional)</label>
     <input type="text" id="google-cx" placeholder="Cole seu CX" oninput="setGoogleCx(this.value)">
+  </div>
+  <div class="photo-pref">
+    <label for="gpt-query-toggle">✨ Usar GPT para melhorar consulta de imagem</label>
+    <input type="checkbox" id="gpt-query-toggle" onchange="toggleGptQueryAssist(this.checked)">
+  </div>
+  <div class="field">
+    <label>OpenAI API Key (opcional)</label>
+    <input type="password" id="openai-api-key" placeholder="Cole sua OpenAI API key" oninput="setOpenAiApiKey(this.value)">
   </div>
   <div class="err-box" id="err-box"></div>
   <button class="btn-gen" onclick="generate()">✦ Gerar Roteiro</button>
@@ -646,6 +654,8 @@ let photoRequestSeq=0;
 const photoSearchCache={};
 let googleApiKey='';
 let googleCx='';
+let openAiApiKey='';
+let enableGptQueryAssist=false;
 
 const CITY_PHOTOS={
   'Rio de Janeiro':'https://upload.wikimedia.org/wikipedia/commons/8/87/Cidade_Maravilhosa.jpg',
@@ -741,8 +751,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('hdr-count').textContent=COUNTRIES.length+' países';
   googleApiKey=localStorage.getItem('wandr_google_api_key')||'';
   googleCx=localStorage.getItem('wandr_google_cx')||'';
+  openAiApiKey=localStorage.getItem('wandr_openai_api_key')||'';
+  enableGptQueryAssist=localStorage.getItem('wandr_gpt_query_assist')==='1';
   document.getElementById('google-api-key').value=googleApiKey;
   document.getElementById('google-cx').value=googleCx;
+  document.getElementById('openai-api-key').value=openAiApiKey;
+  document.getElementById('gpt-query-toggle').checked=enableGptQueryAssist;
   document.getElementById('photo-modal').addEventListener('click',(e)=>{
     if(e.target.id==='photo-modal') closePhotoModal();
   });
@@ -832,6 +846,16 @@ function setGoogleCx(value){
   localStorage.setItem('wandr_google_cx',googleCx);
 }
 
+function setOpenAiApiKey(value){
+  openAiApiKey=(value||'').trim();
+  localStorage.setItem('wandr_openai_api_key',openAiApiKey);
+}
+
+function toggleGptQueryAssist(enabled){
+  enableGptQueryAssist=enabled;
+  localStorage.setItem('wandr_gpt_query_assist',enabled?'1':'0');
+}
+
 function buildActivityPhotoIndex(manualMap){
   const merged={...manualMap};
   Object.entries(CITY_ACTS).forEach(([city,info])=>{
@@ -877,7 +901,7 @@ async function resolvePhotoUrl(activityName,city){
 
 async function searchGoogleImagesPhoto(activityName,city){
   if(!googleApiKey||!googleCx) return '';
-  const terms=[`${activityName} ${city} travel photo`,`${activityName} ${city}`,`${activityName}`];
+  const terms=await buildSearchTerms(activityName,city);
   for(const term of terms){
     const url=`https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(googleApiKey)}&cx=${encodeURIComponent(googleCx)}&q=${encodeURIComponent(term)}&searchType=image&num=5&safe=active&imgSize=large`;
     const res=await fetch(url,{method:'GET'});
@@ -902,6 +926,63 @@ async function searchGoogleImagesPhoto(activityName,city){
     }
   }
   return '';
+}
+
+async function buildSearchTerms(activityName,city){
+  const baseTerms=[`${activityName} ${city} travel photo`,`${activityName} ${city}`,`${activityName}`];
+  if(!enableGptQueryAssist||!openAiApiKey) return baseTerms;
+  try{
+    const gptTerms=await generateSearchTermsWithGpt(activityName,city);
+    if(!gptTerms.length) return baseTerms;
+    return [...new Set([...gptTerms,...baseTerms])].slice(0,6);
+  }catch(_err){
+    return baseTerms;
+  }
+}
+
+async function generateSearchTermsWithGpt(activityName,city){
+  const systemPrompt='Você gera consultas curtas para Google Images de atrações turísticas. Responda somente JSON válido no formato {"terms":["..."]} com no máximo 3 itens.';
+  const userPrompt=`Atração: ${activityName}\nCidade: ${city}\nIdioma: português`;
+  const res=await fetch('https://api.openai.com/v1/responses',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':`Bearer ${openAiApiKey}`
+    },
+    body:JSON.stringify({
+      model:'gpt-4.1-mini',
+      input:[
+        {role:'system',content:systemPrompt},
+        {role:'user',content:userPrompt}
+      ],
+      temperature:0.2,
+      max_output_tokens:120
+    })
+  });
+  if(!res.ok) return [];
+  const data=await res.json();
+  const text=(data&&data.output_text?String(data.output_text):'').trim();
+  if(!text) return [];
+  const parsed=safeParseJsonObject(text);
+  const terms=Array.isArray(parsed&&parsed.terms)?parsed.terms:[];
+  return terms
+    .map(t=>String(t||'').trim())
+    .filter(Boolean)
+    .slice(0,3);
+}
+
+function safeParseJsonObject(raw){
+  try{
+    return JSON.parse(raw);
+  }catch(_err){
+    const match=raw.match(/\{[\s\S]*\}/);
+    if(!match) return null;
+    try{
+      return JSON.parse(match[0]);
+    }catch(_err2){
+      return null;
+    }
+  }
 }
 
 function buildInlinePhoto(title,city){
