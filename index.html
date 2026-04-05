@@ -652,7 +652,17 @@ const ACTIVITY_PHOTOS={
   'Louvre':'https://upload.wikimedia.org/wikipedia/commons/a/af/Louvre_Museum_Wikimedia_Commons.jpg',
   'Coliseu':'https://upload.wikimedia.org/wikipedia/commons/d/de/Colosseo_2020.jpg',
   'Senso-ji (Asakusa)':'https://upload.wikimedia.org/wikipedia/commons/2/27/Sensoji_Temple.jpg',
-  'Fushimi Inari':'https://upload.wikimedia.org/wikipedia/commons/0/0e/Fushimi_Inari-Taisha_in_Kyoto.jpg'
+  'Fushimi Inari':'https://upload.wikimedia.org/wikipedia/commons/0/0e/Fushimi_Inari-Taisha_in_Kyoto.jpg',
+  'Tsukiji — sushi de manhã':'https://upload.wikimedia.org/wikipedia/commons/3/3f/Tsukiji_Outer_Market.jpg',
+  'Shibuya Crossing':'https://upload.wikimedia.org/wikipedia/commons/5/5b/Shibuya_Crossing%2C_Tokyo%2C_Japan_%282018%29.jpg',
+  'Meiji Jingu':'https://upload.wikimedia.org/wikipedia/commons/b/bb/Meiji_Shrine_Inner_Garden.jpg',
+  'Harajuku — Takeshita Street':'https://upload.wikimedia.org/wikipedia/commons/0/08/Takeshita_Street_Harajuku_2020.jpg',
+  'Akihabara':'https://upload.wikimedia.org/wikipedia/commons/a/a5/Akihabara_Electric_Town.jpg',
+  'Yanaka':'https://upload.wikimedia.org/wikipedia/commons/4/47/Yanaka_Ginza%2C_Tokyo.jpg',
+  'teamLab Borderless':'https://upload.wikimedia.org/wikipedia/commons/7/75/TeamLab_Borderless_Odaiba.jpg',
+  'Tokyo Skytree':'https://upload.wikimedia.org/wikipedia/commons/1/14/Tokyo_Skytree_2014_%28cropped%29.jpg',
+  'Shinjuku — Golden Gai à noite':'https://upload.wikimedia.org/wikipedia/commons/9/93/Golden_Gai%2C_Shinjuku%2C_Tokyo.jpg',
+  'Tokyo Skytree + Asakusa':'https://upload.wikimedia.org/wikipedia/commons/1/14/Tokyo_Skytree_2014_%28cropped%29.jpg'
 };
 
 const LOCAL_EXPERIENCE_TEMPLATES=[
@@ -753,42 +763,7 @@ function togglePhotos(enabled){
 }
 
 function getPhotoUrl(activityName,city){
-  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||'';
-}
-
-function buildWebPhotoUrl(activityName,city){
-  const q=`${activityName||''}, ${city||''}, landmark, travel`;
-  return `https://source.unsplash.com/1600x900/?${encodeURIComponent(q)}`;
-}
-
-async function fetchWikipediaPhoto(query){
-  if(!query) return '';
-  try{
-    const endpoint=`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
-    const rsp=await fetch(endpoint);
-    if(!rsp.ok) return '';
-    const data=await rsp.json();
-    return (data.thumbnail&&data.thumbnail.source)||(data.originalimage&&data.originalimage.source)||'';
-  }catch(e){
-    return '';
-  }
-}
-
-async function resolvePhotoUrl(activityName,city){
-  const mapped=getPhotoUrl(activityName,city);
-  if(mapped) return mapped;
-
-  const candidates=[
-    activityName,
-    `${activityName} ${city}`,
-    `${activityName} in ${city}`,
-    city
-  ];
-  for(const q of candidates){
-    const wikiPhoto=await fetchWikipediaPhoto(q);
-    if(wikiPhoto) return wikiPhoto;
-  }
-  return buildWebPhotoUrl(activityName,city);
+  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
 }
 
 function buildInlinePhoto(title,city){
@@ -837,23 +812,18 @@ function escSingle(v){
   return String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 
-async function openPhotoModal(title,city){
+function openPhotoModal(title,city){
   const modal=document.getElementById('photo-modal');
   const img=document.getElementById('photo-modal-img');
   const cap=document.getElementById('photo-modal-cap');
-  const reqId=++photoRequestSeq;
+  photoRequestSeq++;
   img.dataset.title=title;
   img.dataset.city=city;
   img.dataset.fallback='0';
-  img.src=buildInlinePhoto('Carregando foto…',city);
+  img.src=getPhotoUrl(title,city);
   img.alt=`Foto de ${title} em ${city}`;
   cap.textContent=`${title} — ${city}`;
   modal.classList.add('show');
-
-  const resolved=await resolvePhotoUrl(title,city);
-  if(reqId!==photoRequestSeq) return;
-  img.dataset.fallback='0';
-  img.src=resolved||buildInlinePhoto(title,city);
 }
 
 function closePhotoModal(){
