@@ -171,7 +171,7 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 .tip-item:last-child{border:none;}
 .tip-item::before{content:'✦';color:var(--gold);font-size:.55rem;margin-top:4px;flex-shrink:0;}
 
-@media(max-width:600px){.sidebar{padding:20px 16px;}.output{padding:20px 16px;}.result-hdr{flex-direction:column;gap:12px;}.result-hdr h1{font-size:1.5rem;}.act-head{flex-direction:column;align-items:flex-start;}.act-photo-btn{padding:6px 10px;font-size:.72rem;}}
+@media(max-width:600px){.sidebar{padding:20px 16px;}.output{padding:20px 16px;}.result-hdr{flex-direction:column;gap:12px;}.result-hdr h1{font-size:1.5rem;}.act-head{flex-direction:column;align-items:flex-start;}}
 </style>
 </head>
 <body>
@@ -183,7 +183,7 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 <div class="layout">
 <aside class="sidebar">
   <div class="sb-title">Monte seu roteiro</div>
-  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Modo híbrido: offline por padrão + busca online com Google Images API e assistente GPT opcional.</strong></div>
+  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Funciona 100% offline, sem API e sem IA online.</strong></div>
   <div class="field">
     <label>Modo de viagem</label>
     <div class="toggle-tabs">
@@ -256,14 +256,6 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
   <div id="result" style="display:none"></div>
 </main>
 </div>
-<div class="photo-modal" id="photo-modal" role="dialog" aria-modal="true" aria-label="Foto do lugar">
-  <div class="photo-modal-box">
-    <button class="photo-close" type="button" onclick="closePhotoModal()">Fechar ✕</button>
-    <img id="photo-modal-img" alt="" onerror="handleModalImgError(this)">
-    <div class="photo-cap" id="photo-modal-cap"></div>
-  </div>
-</div>
-
 <script>
 // ═══════════════════════════════════════════════════
 // MESES
@@ -747,6 +739,21 @@ const LOCAL_EXPERIENCE_TEMPLATES=[
 
 const ACTIVITY_PHOTOS=buildActivityPhotoIndex(ACTIVITY_PHOTOS_MANUAL);
 
+const LOCAL_EXPERIENCE_TEMPLATES=[
+  {n:'Café da manhã de bairro',d:'Comece o dia em uma padaria/café tradicional para observar o ritmo local.',type:'☕ Vida local'},
+  {n:'Mercado de produtores',d:'Visite um mercado de bairro para provar produtos sazonais e conversar com vendedores.',type:'🛍 Mercado'},
+  {n:'Passeio arquitetônico',d:'Caminhe por ruas históricas e observe fachadas, praças e detalhes urbanos.',type:'🏛 Arquitetura'},
+  {n:'Parque urbano',d:'Pausa em uma área verde para desacelerar e recuperar energia.',type:'🌿 Natureza'},
+  {n:'Rota de mirantes',d:'Escolha 1 ou 2 pontos altos para ver a cidade em diferentes horários.',type:'🌅 Vista'},
+  {n:'Rua gastronômica',d:'Explore uma rua famosa por bares e restaurantes e escolha um prato típico.',type:'🍴 Gastronomia'},
+  {n:'Museu ou centro cultural alternativo',d:'Inclua um espaço menos turístico para variar o repertório do roteiro.',type:'🎨 Cultura'},
+  {n:'Bairro residencial',d:'Passeio sem pressa por uma área residencial para viver a cidade além dos cartões-postais.',type:'🏘 Bairro'},
+  {n:'Lojas e design local',d:'Descubra lojas de criadores locais, livrarias e pequenos ateliês.',type:'🛍 Compras'},
+  {n:'Fim de tarde panorâmico',d:'Reserve o fim da tarde em um ponto com boa vista para fotos e descanso.',type:'🌇 Pôr do sol'},
+  {n:'Circuito histórico',d:'Conecte 2 a 3 pontos históricos próximos para evitar deslocamentos longos.',type:'🏛 Patrimônio'},
+  {n:'Noite cultural',d:'Inclua show, teatro, música ao vivo ou apresentação típica da região.',type:'🎵 Noite'},
+];
+
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
@@ -833,247 +840,6 @@ function updateCityList(){
   const c=COUNTRIES.find(x=>x.k===ck);
   const sel=document.getElementById('sel-city');
   sel.innerHTML=c&&c.cities.length?c.cities.map(ci=>`<option value="${ci}">${ci}</option>`).join(''):'<option value="">— Selecione o país primeiro —</option>';
-}
-
-function togglePhotos(enabled){
-  showPhotoOption=enabled;
-}
-
-function toggleAiPhotos(enabled){
-  enableAiPhotoSearch=enabled;
-}
-
-function setGoogleApiKey(value){
-  googleApiKey=(value||'').trim();
-  localStorage.setItem('wandr_google_api_key',googleApiKey);
-}
-
-function setGoogleCx(value){
-  googleCx=(value||'').trim();
-  localStorage.setItem('wandr_google_cx',googleCx);
-}
-
-function setOpenAiApiKey(value){
-  openAiApiKey=(value||'').trim();
-  localStorage.setItem('wandr_openai_api_key',openAiApiKey);
-}
-
-function toggleGptQueryAssist(enabled){
-  enableGptQueryAssist=enabled;
-  localStorage.setItem('wandr_gpt_query_assist',enabled?'1':'0');
-}
-
-function toggleAiItinerary(enabled){
-  enableAiItinerary=enabled;
-  localStorage.setItem('wandr_ai_itinerary',enabled?'1':'0');
-}
-
-function buildActivityPhotoIndex(manualMap){
-  const merged={...manualMap};
-  Object.entries(CITY_ACTS).forEach(([city,info])=>{
-    const cityPhoto=CITY_PHOTOS[city]||'';
-    (info.acts||[]).forEach(act=>{
-      if(!merged[act.n]){
-        merged[act.n]=cityPhoto||buildInlinePhoto(act.n,city);
-      }
-    });
-  });
-  return merged;
-}
-
-function getPhotoUrl(activityName,city){
-  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
-}
-
-async function resolvePhotoUrl(activityName,city){
-  const directPhoto=ACTIVITY_PHOTOS[activityName];
-  if(directPhoto) return directPhoto;
-
-  if(!enableAiPhotoSearch){
-    return CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
-  }
-
-  const cacheKey=`${city}::${activityName}`;
-  if(photoSearchCache[cacheKey]) return photoSearchCache[cacheKey];
-
-  try{
-    const found=await searchGoogleImagesPhoto(activityName,city);
-    if(found){
-      photoSearchCache[cacheKey]=found;
-      return found;
-    }
-  }catch(_err){
-    // Falha de rede/bloqueio: segue fallback.
-  }
-
-  const fallback=CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
-  photoSearchCache[cacheKey]=fallback;
-  return fallback;
-}
-
-async function searchGoogleImagesPhoto(activityName,city){
-  if(!googleApiKey||!googleCx) return '';
-  const terms=await buildSearchTerms(activityName,city);
-  for(const term of terms){
-    const url=`https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(googleApiKey)}&cx=${encodeURIComponent(googleCx)}&q=${encodeURIComponent(term)}&searchType=image&num=5&safe=active&imgSize=large`;
-    const res=await fetch(url,{method:'GET'});
-    if(!res.ok) continue;
-    const data=await res.json();
-    const items=Array.isArray(data&&data.items)?data.items:[];
-    const good=items
-      .map(item=>({
-        link:item&&item.link?item.link:'',
-        mime:item&&item.mime?item.mime:'',
-      }))
-      .filter(Boolean)
-      .find(info=>{
-        const candidate=String(info.link||'');
-        if(!candidate) return false;
-        if(!/\.(jpg|jpeg|png|webp)(\?|$)/i.test(candidate)) return false;
-        if(info.mime&&/^image\//i.test(info.mime)===false) return false;
-        return true;
-      });
-    if(good){
-      return good.link;
-    }
-  }
-  return '';
-}
-
-async function buildSearchTerms(activityName,city){
-  const baseTerms=[`${activityName} ${city} travel photo`,`${activityName} ${city}`,`${activityName}`];
-  if(!enableGptQueryAssist||!openAiApiKey) return baseTerms;
-  try{
-    const gptTerms=await generateSearchTermsWithGpt(activityName,city);
-    if(!gptTerms.length) return baseTerms;
-    return [...new Set([...gptTerms,...baseTerms])].slice(0,6);
-  }catch(_err){
-    return baseTerms;
-  }
-}
-
-async function generateSearchTermsWithGpt(activityName,city){
-  const systemPrompt='Você gera consultas curtas para Google Images de atrações turísticas. Responda somente JSON válido no formato {"terms":["..."]} com no máximo 3 itens.';
-  const userPrompt=`Atração: ${activityName}\nCidade: ${city}\nIdioma: português`;
-  const res=await fetch('https://api.openai.com/v1/responses',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'Authorization':`Bearer ${openAiApiKey}`
-    },
-    body:JSON.stringify({
-      model:'gpt-4.1-mini',
-      input:[
-        {role:'system',content:systemPrompt},
-        {role:'user',content:userPrompt}
-      ],
-      temperature:0.2,
-      max_output_tokens:120
-    })
-  });
-  if(!res.ok) return [];
-  const data=await res.json();
-  const text=(data&&data.output_text?String(data.output_text):'').trim();
-  if(!text) return [];
-  const parsed=safeParseJsonObject(text);
-  const terms=Array.isArray(parsed&&parsed.terms)?parsed.terms:[];
-  return terms
-    .map(t=>String(t||'').trim())
-    .filter(Boolean)
-    .slice(0,3);
-}
-
-function safeParseJsonObject(raw){
-  try{
-    return JSON.parse(raw);
-  }catch(_err){
-    const match=raw.match(/\{[\s\S]*\}/);
-    if(!match) return null;
-    try{
-      return JSON.parse(match[0]);
-    }catch(_err2){
-      return null;
-    }
-  }
-}
-
-function buildInlinePhoto(title,city){
-  const safeTitle=escapeXml(String(title||'Atração').slice(0,44));
-  const safeCity=escapeXml(String(city||'Destino').slice(0,40));
-  const svg=`
-  <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
-    <defs>
-      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#1C1917"/>
-        <stop offset="100%" stop-color="#3A2A1A"/>
-      </linearGradient>
-    </defs>
-    <rect width="1200" height="760" fill="url(#bg)"/>
-    <circle cx="980" cy="120" r="180" fill="#D4903A" opacity="0.20"/>
-    <circle cx="240" cy="640" r="210" fill="#5AB8B8" opacity="0.12"/>
-    <text x="80" y="330" fill="#F4EBDD" font-size="64" font-family="Arial, Helvetica, sans-serif" font-weight="700">${safeTitle}</text>
-    <text x="82" y="392" fill="#D9C7AE" font-size="34" font-family="Arial, Helvetica, sans-serif">📍 ${safeCity}</text>
-    <text x="82" y="690" fill="#B39F88" font-size="26" font-family="Arial, Helvetica, sans-serif">Wandr • modo offline</text>
-  </svg>`;
-  return `data:image/svg+xml;base64,${toBase64Utf8(svg)}`;
-}
-
-function escapeXml(v){
-  return v
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&apos;');
-}
-
-function toBase64Utf8(str){
-  return btoa(unescape(encodeURIComponent(str)));
-}
-
-function handleModalImgError(img){
-  if(img.dataset.fallback==='1') return;
-  const t=img.dataset.title||'Atração';
-  const c=img.dataset.city||'Destino';
-  img.dataset.fallback='1';
-  img.src=buildInlinePhoto(t,c);
-}
-
-function escSingle(v){
-  return String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-}
-
-async function openPhotoModal(title,city){
-  const modal=document.getElementById('photo-modal');
-  const img=document.getElementById('photo-modal-img');
-  const cap=document.getElementById('photo-modal-cap');
-  photoRequestSeq++;
-  const requestSeq=photoRequestSeq;
-  img.dataset.title=title;
-  img.dataset.city=city;
-  img.dataset.fallback='0';
-  img.src=buildInlinePhoto('Carregando foto…',city);
-  img.alt=`Foto de ${title} em ${city}`;
-  cap.textContent=enableAiPhotoSearch
-    ? `${title} — ${city} (buscando no Google Images API...)`
-    : `${title} — ${city}`;
-  modal.classList.add('show');
-  const url=await resolvePhotoUrl(title,city);
-  if(requestSeq!==photoRequestSeq) return;
-  img.dataset.fallback='0';
-  img.src=url;
-  cap.textContent=`${title} — ${city}`;
-}
-
-function closePhotoModal(){
-  const modal=document.getElementById('photo-modal');
-  const img=document.getElementById('photo-modal-img');
-  photoRequestSeq++;
-  modal.classList.remove('show');
-  img.src='';
-  img.dataset.title='';
-  img.dataset.city='';
-  img.dataset.fallback='0';
 }
 
 function createSeededRng(seedStr){
@@ -1185,10 +951,10 @@ function generate(){
   const msgs=['Montando seu roteiro…','Verificando a melhor estação…','Organizando os dias…','Quase pronto!'];
   let mi=0;
   const iv=setInterval(()=>{document.getElementById('loading-msg').textContent=msgs[(++mi)%msgs.length];},1200);
-  setTimeout(async()=>{
+  setTimeout(()=>{
     clearInterval(iv);
     document.getElementById('loading').classList.remove('show');
-    await buildItinerary(ck,mode==='city'?cv:null,selectedDays,selectedMonth);
+    buildItinerary(ck,mode==='city'?cv:null,selectedDays,selectedMonth);
     document.getElementById('result').style.display='block';
   },1400);
 }
@@ -1374,8 +1140,7 @@ function renderResult(flag,name,si,month,days,isCity,routeCities,dayPlans,ck,abo
   const daysHTML=dayPlans.map((dp,di)=>{
     const travelNote=dp.isTravel&&dp.prevCity?`<div class="travel-note"><div class="travel-note-icon">🚌</div><p>Deslocamento de ${dp.prevCity} para ${dp.city}. Considere transporte de manhã (trem, ônibus ou voo) e aproveite a tarde para se estabelecer.</p></div>`:'';
     const actsHTML=dp.activities.map((a,ai)=>{
-      const photoBtn=showPhotoOption?`<button type="button" class="act-photo-btn" onclick="openPhotoModal('${escSingle(a.n)}','${escSingle(dp.city)}')">Ver foto</button>`:'';
-      return `<div class="act"><div class="act-bullet"></div><div class="act-content"><div class="act-head"><div class="act-name">${a.n}</div>${photoBtn}</div><div class="act-desc">${a.d}</div><div class="act-tags">${a.type?`<span class="act-tag tag-type">${a.type}</span>`:''} ${a.snote?`<span class="act-tag tag-season">${a.snote}</span>`:''} ${a.tip?`<span class="act-tag tag-tip">💡 ${a.tip}</span>`:''}</div></div></div>`;
+      return `<div class="act"><div class="act-bullet"></div><div class="act-content"><div class="act-head"><div class="act-name">${a.n}</div></div><div class="act-desc">${a.d}</div><div class="act-tags">${a.type?`<span class="act-tag tag-type">${a.type}</span>`:''} ${a.snote?`<span class="act-tag tag-season">${a.snote}</span>`:''} ${a.tip?`<span class="act-tag tag-tip">💡 ${a.tip}</span>`:''}</div></div></div>`;
     }).join('');
     return `<div class="day-card" style="animation-delay:${di*.04}s"><div class="day-head"><div class="day-head-left"><span class="day-num">Dia ${dp.day}</span><span class="day-title">${dp.title}</span></div>${routeCities.length>1?`<span class="day-city-tag">📍 ${dp.city}</span>`:''}</div>${travelNote}<div class="day-body">${actsHTML}</div></div>`;
   }).join('');
