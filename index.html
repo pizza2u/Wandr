@@ -183,7 +183,7 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 <div class="layout">
 <aside class="sidebar">
   <div class="sb-title">Monte seu roteiro</div>
-  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Funciona 100% offline, sem integração de IA online.</strong></div>
+  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Modo offline por padrão. Você pode ativar busca online via Google Images (API).</strong></div>
   <div class="field">
     <label>Modo de viagem</label>
     <div class="toggle-tabs">
@@ -218,6 +218,18 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
   <div class="photo-pref">
     <label for="photos-toggle">🖼 Exibir opção de fotos nas atrações</label>
     <input type="checkbox" id="photos-toggle" checked onchange="togglePhotos(this.checked)">
+  </div>
+  <div class="photo-pref">
+    <label for="ai-photos-toggle">🤖 Buscar foto online automaticamente (Google Images API)</label>
+    <input type="checkbox" id="ai-photos-toggle" onchange="toggleAiPhotos(this.checked)">
+  </div>
+  <div class="field">
+    <label>Google Images API Key (opcional)</label>
+    <input type="password" id="google-api-key" placeholder="Cole sua API key" oninput="setGoogleApiKey(this.value)">
+  </div>
+  <div class="field">
+    <label>Google Search Engine ID / CX (opcional)</label>
+    <input type="text" id="google-cx" placeholder="Cole seu CX" oninput="setGoogleCx(this.value)">
   </div>
   <div class="err-box" id="err-box"></div>
   <button class="btn-gen" onclick="generate()">✦ Gerar Roteiro</button>
@@ -629,8 +641,11 @@ const COUNTRY_TIPS={
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-let mode='country', selectedMonth=null, selectedDays=7, showPhotoOption=true;
+let mode='country', selectedMonth=null, selectedDays=7, showPhotoOption=true, enableAiPhotoSearch=false;
 let photoRequestSeq=0;
+const photoSearchCache={};
+let googleApiKey='';
+let googleCx='';
 
 const CITY_PHOTOS={
   'Rio de Janeiro':'https://upload.wikimedia.org/wikipedia/commons/8/87/Cidade_Maravilhosa.jpg',
@@ -724,6 +739,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   populateCountries();
   buildMonthGrid();
   document.getElementById('hdr-count').textContent=COUNTRIES.length+' países';
+  googleApiKey=localStorage.getItem('wandr_google_api_key')||'';
+  googleCx=localStorage.getItem('wandr_google_cx')||'';
+  document.getElementById('google-api-key').value=googleApiKey;
+  document.getElementById('google-cx').value=googleCx;
   document.getElementById('photo-modal').addEventListener('click',(e)=>{
     if(e.target.id==='photo-modal') closePhotoModal();
   });
@@ -799,6 +818,20 @@ function togglePhotos(enabled){
   showPhotoOption=enabled;
 }
 
+function toggleAiPhotos(enabled){
+  enableAiPhotoSearch=enabled;
+}
+
+function setGoogleApiKey(value){
+  googleApiKey=(value||'').trim();
+  localStorage.setItem('wandr_google_api_key',googleApiKey);
+}
+
+function setGoogleCx(value){
+  googleCx=(value||'').trim();
+  localStorage.setItem('wandr_google_cx',googleCx);
+}
+
 function buildActivityPhotoIndex(manualMap){
   const merged={...manualMap};
   Object.entries(CITY_ACTS).forEach(([city,info])=>{
@@ -814,6 +847,61 @@ function buildActivityPhotoIndex(manualMap){
 
 function getPhotoUrl(activityName,city){
   return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
+}
+
+async function resolvePhotoUrl(activityName,city){
+  const directPhoto=ACTIVITY_PHOTOS[activityName];
+  if(directPhoto) return directPhoto;
+
+  if(!enableAiPhotoSearch){
+    return CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
+  }
+
+  const cacheKey=`${city}::${activityName}`;
+  if(photoSearchCache[cacheKey]) return photoSearchCache[cacheKey];
+
+  try{
+    const found=await searchGoogleImagesPhoto(activityName,city);
+    if(found){
+      photoSearchCache[cacheKey]=found;
+      return found;
+    }
+  }catch(_err){
+    // Falha de rede/bloqueio: segue fallback.
+  }
+
+  const fallback=CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
+  photoSearchCache[cacheKey]=fallback;
+  return fallback;
+}
+
+async function searchGoogleImagesPhoto(activityName,city){
+  if(!googleApiKey||!googleCx) return '';
+  const terms=[`${activityName} ${city} travel photo`,`${activityName} ${city}`,`${activityName}`];
+  for(const term of terms){
+    const url=`https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(googleApiKey)}&cx=${encodeURIComponent(googleCx)}&q=${encodeURIComponent(term)}&searchType=image&num=5&safe=active&imgSize=large`;
+    const res=await fetch(url,{method:'GET'});
+    if(!res.ok) continue;
+    const data=await res.json();
+    const items=Array.isArray(data&&data.items)?data.items:[];
+    const good=items
+      .map(item=>({
+        link:item&&item.link?item.link:'',
+        mime:item&&item.mime?item.mime:'',
+      }))
+      .filter(Boolean)
+      .find(info=>{
+        const candidate=String(info.link||'');
+        if(!candidate) return false;
+        if(!/\.(jpg|jpeg|png|webp)(\?|$)/i.test(candidate)) return false;
+        if(info.mime&&/^image\//i.test(info.mime)===false) return false;
+        return true;
+      });
+    if(good){
+      return good.link;
+    }
+  }
+  return '';
 }
 
 function buildInlinePhoto(title,city){
@@ -862,18 +950,26 @@ function escSingle(v){
   return String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 
-function openPhotoModal(title,city){
+async function openPhotoModal(title,city){
   const modal=document.getElementById('photo-modal');
   const img=document.getElementById('photo-modal-img');
   const cap=document.getElementById('photo-modal-cap');
   photoRequestSeq++;
+  const requestSeq=photoRequestSeq;
   img.dataset.title=title;
   img.dataset.city=city;
   img.dataset.fallback='0';
-  img.src=getPhotoUrl(title,city);
+  img.src=buildInlinePhoto('Carregando foto…',city);
   img.alt=`Foto de ${title} em ${city}`;
-  cap.textContent=`${title} — ${city}`;
+  cap.textContent=enableAiPhotoSearch
+    ? `${title} — ${city} (buscando no Google Images API...)`
+    : `${title} — ${city}`;
   modal.classList.add('show');
+  const url=await resolvePhotoUrl(title,city);
+  if(requestSeq!==photoRequestSeq) return;
+  img.dataset.fallback='0';
+  img.src=url;
+  cap.textContent=`${title} — ${city}`;
 }
 
 function closePhotoModal(){
