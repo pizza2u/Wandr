@@ -676,6 +676,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   populateCountries();
   buildMonthGrid();
   document.getElementById('hdr-count').textContent=COUNTRIES.length+' países';
+  const modalImg=document.getElementById('photo-modal-img');
+  modalImg.addEventListener('error',()=>{
+    const t=modalImg.dataset.title||'Atração';
+    const c=modalImg.dataset.city||'Destino';
+    modalImg.src=buildInlinePhoto(t,c);
+  });
   document.getElementById('photo-modal').addEventListener('click',(e)=>{
     if(e.target.id==='photo-modal') closePhotoModal();
   });
@@ -752,7 +758,28 @@ function togglePhotos(enabled){
 }
 
 function getPhotoUrl(activityName,city){
-  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||'';
+  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
+}
+
+function buildInlinePhoto(title,city){
+  const safeTitle=String(title||'Atração').slice(0,44);
+  const safeCity=String(city||'Destino').slice(0,40);
+  const svg=`
+  <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#1C1917"/>
+        <stop offset="100%" stop-color="#3A2A1A"/>
+      </linearGradient>
+    </defs>
+    <rect width="1200" height="760" fill="url(#bg)"/>
+    <circle cx="980" cy="120" r="180" fill="#D4903A" opacity="0.20"/>
+    <circle cx="240" cy="640" r="210" fill="#5AB8B8" opacity="0.12"/>
+    <text x="80" y="330" fill="#F4EBDD" font-size="64" font-family="Arial, Helvetica, sans-serif" font-weight="700">${safeTitle}</text>
+    <text x="82" y="392" fill="#D9C7AE" font-size="34" font-family="Arial, Helvetica, sans-serif">📍 ${safeCity}</text>
+    <text x="82" y="690" fill="#B39F88" font-size="26" font-family="Arial, Helvetica, sans-serif">Wandr • modo offline</text>
+  </svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 function escSingle(v){
@@ -764,6 +791,8 @@ function openPhotoModal(url,title,city){
   const modal=document.getElementById('photo-modal');
   const img=document.getElementById('photo-modal-img');
   const cap=document.getElementById('photo-modal-cap');
+  img.dataset.title=title;
+  img.dataset.city=city;
   img.src=url;
   img.alt=`Foto de ${title} em ${city}`;
   cap.textContent=`${title} — ${city}`;
@@ -775,6 +804,8 @@ function closePhotoModal(){
   const img=document.getElementById('photo-modal-img');
   modal.classList.remove('show');
   img.src='';
+  img.dataset.title='';
+  img.dataset.city='';
 }
 
 function createSeededRng(seedStr){
