@@ -752,7 +752,12 @@ function togglePhotos(enabled){
 }
 
 function getPhotoUrl(activityName,city){
-  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||buildInlinePhoto(activityName,city);
+  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||buildWebPhotoUrl(activityName,city)||buildInlinePhoto(activityName,city);
+}
+
+function buildWebPhotoUrl(activityName,city){
+  const q=`${activityName||''}, ${city||''}, landmark, travel`;
+  return `https://source.unsplash.com/1600x900/?${encodeURIComponent(q)}`;
 }
 
 function buildInlinePhoto(title,city){
