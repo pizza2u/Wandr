@@ -136,7 +136,8 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 .act:last-child{border:none;}
 .act-bullet{width:8px;height:8px;border-radius:50%;background:var(--amber);opacity:.7;margin-top:5px;flex-shrink:0;}
 .act-content{flex:1;}
-.act-name{font-weight:600;font-size:.88rem;margin-bottom:3px;}
+.act-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.act-name{font-weight:600;font-size:.88rem;margin-bottom:3px;line-height:1.4;}
 .act-desc{font-size:.78rem;color:var(--soft);line-height:1.55;}
 .act-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;}
 .act-tag{font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.3px;}
@@ -157,7 +158,7 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 .tip-item:last-child{border:none;}
 .tip-item::before{content:'✦';color:var(--gold);font-size:.55rem;margin-top:4px;flex-shrink:0;}
 
-@media(max-width:600px){.sidebar{padding:20px 16px;}.output{padding:20px 16px;}.result-hdr{flex-direction:column;gap:12px;}.result-hdr h1{font-size:1.5rem;}}
+@media(max-width:600px){.sidebar{padding:20px 16px;}.output{padding:20px 16px;}.result-hdr{flex-direction:column;gap:12px;}.result-hdr h1{font-size:1.5rem;}.act-head{flex-direction:column;align-items:flex-start;}}
 </style>
 </head>
 <body>
@@ -169,7 +170,7 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
 <div class="layout">
 <aside class="sidebar">
   <div class="sb-title">Monte seu roteiro</div>
-  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.</div>
+  <div class="sb-sub">Escolha destino, quantos dias e quando vai viajar. O roteiro se adapta ao seu ritmo e à estação do ano.<br><strong style="color:var(--amber2)">Funciona 100% offline, sem API e sem IA online.</strong></div>
   <div class="field">
     <label>Modo de viagem</label>
     <div class="toggle-tabs">
@@ -214,7 +215,6 @@ body{font-family:'Mulish',sans-serif;background:var(--bg);color:var(--text);min-
   <div id="result" style="display:none"></div>
 </main>
 </div>
-
 <script>
 // ═══════════════════════════════════════════════════
 // MESES
@@ -606,6 +606,21 @@ const COUNTRY_TIPS={
 // ═══════════════════════════════════════════════════
 let mode='country', selectedMonth=null, selectedDays=7;
 
+const LOCAL_EXPERIENCE_TEMPLATES=[
+  {n:'Café da manhã de bairro',d:'Comece o dia em uma padaria/café tradicional para observar o ritmo local.',type:'☕ Vida local'},
+  {n:'Mercado de produtores',d:'Visite um mercado de bairro para provar produtos sazonais e conversar com vendedores.',type:'🛍 Mercado'},
+  {n:'Passeio arquitetônico',d:'Caminhe por ruas históricas e observe fachadas, praças e detalhes urbanos.',type:'🏛 Arquitetura'},
+  {n:'Parque urbano',d:'Pausa em uma área verde para desacelerar e recuperar energia.',type:'🌿 Natureza'},
+  {n:'Rota de mirantes',d:'Escolha 1 ou 2 pontos altos para ver a cidade em diferentes horários.',type:'🌅 Vista'},
+  {n:'Rua gastronômica',d:'Explore uma rua famosa por bares e restaurantes e escolha um prato típico.',type:'🍴 Gastronomia'},
+  {n:'Museu ou centro cultural alternativo',d:'Inclua um espaço menos turístico para variar o repertório do roteiro.',type:'🎨 Cultura'},
+  {n:'Bairro residencial',d:'Passeio sem pressa por uma área residencial para viver a cidade além dos cartões-postais.',type:'🏘 Bairro'},
+  {n:'Lojas e design local',d:'Descubra lojas de criadores locais, livrarias e pequenos ateliês.',type:'🛍 Compras'},
+  {n:'Fim de tarde panorâmico',d:'Reserve o fim da tarde em um ponto com boa vista para fotos e descanso.',type:'🌇 Pôr do sol'},
+  {n:'Circuito histórico',d:'Conecte 2 a 3 pontos históricos próximos para evitar deslocamentos longos.',type:'🏛 Patrimônio'},
+  {n:'Noite cultural',d:'Inclua show, teatro, música ao vivo ou apresentação típica da região.',type:'🎵 Noite'},
+];
+
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
@@ -678,6 +693,95 @@ function updateCityList(){
   sel.innerHTML=c&&c.cities.length?c.cities.map(ci=>`<option value="${ci}">${ci}</option>`).join(''):'<option value="">— Selecione o país primeiro —</option>';
 }
 
+function createSeededRng(seedStr){
+  let seed=0;
+  for(let i=0;i<seedStr.length;i++) seed=(seed*31+seedStr.charCodeAt(i))>>>0;
+  if(seed===0) seed=0x9e3779b9;
+  return function(){
+    seed=(seed*1664525+1013904223)>>>0;
+    return seed/4294967296;
+  };
+}
+
+function shuffleWithSeed(arr,seedStr){
+  const rnd=createSeededRng(seedStr);
+  const out=[...arr];
+  for(let i=out.length-1;i>0;i--){
+    const j=Math.floor(rnd()*(i+1));
+    [out[i],out[j]]=[out[j],out[i]];
+  }
+  return out;
+}
+
+function buildActivityPool(cityData,countryGeneric,month,seedKey){
+  const source=cityData?[...cityData.acts]:countryGeneric.length?[...countryGeneric]:[...COUNTRY_GENERIC_ACTS.default_generic];
+  return shuffleWithSeed(source,seedKey).map(a=>({
+    ...a,
+    snote:a.seasonal&&a.seasonal[month]?a.seasonal[month]:null
+  }));
+}
+
+function pickDayActivities(pool,usedCounts,lastDayNames,count,preferNight){
+  const picked=[];
+  const mustAvoid=new Set(lastDayNames);
+  const eligible=pool
+    .map((a,idx)=>({a,idx}))
+    .sort((x,y)=>{
+      const cx=usedCounts[x.idx]||0;
+      const cy=usedCounts[y.idx]||0;
+      if(cx!==cy) return cx-cy;
+      return x.idx-y.idx;
+    });
+
+  for(const item of eligible){
+    if(picked.length>=count) break;
+    if(mustAvoid.has(item.a.n)) continue;
+    picked.push(item.a);
+    usedCounts[item.idx]=(usedCounts[item.idx]||0)+1;
+  }
+
+  if(picked.length<count){
+    for(const item of eligible){
+      if(picked.length>=count) break;
+      if(picked.some(p=>p.n===item.a.n)) continue;
+      picked.push(item.a);
+      usedCounts[item.idx]=(usedCounts[item.idx]||0)+1;
+    }
+  }
+
+  if(preferNight){
+    const night=pool.find(a=>a.type&&a.type.includes('Noite')&&!picked.some(p=>p.n===a.n)&&!mustAvoid.has(a.n));
+    if(night) picked.push(night);
+  }
+
+  return picked;
+}
+
+function enrichPoolForLongTrips(pool,city,minUniqueNeeded){
+  const uniqueNames=new Set(pool.map(a=>a.n));
+  const target=Math.max(uniqueNames.size,Math.min(minUniqueNeeded,24));
+  if(uniqueNames.size>=target) return pool;
+
+  const out=[...pool];
+  let idx=0;
+  while(uniqueNames.size<target){
+    const tpl=LOCAL_EXPERIENCE_TEMPLATES[idx%LOCAL_EXPERIENCE_TEMPLATES.length];
+    const cycle=Math.floor(idx/LOCAL_EXPERIENCE_TEMPLATES.length)+1;
+    const name=`${tpl.n} — ${city}${cycle>1?` (${cycle})`:''}`;
+    if(!uniqueNames.has(name)){
+      out.push({
+        n:name,
+        d:`${tpl.d} Em ${city}, escolha essa atividade como alternativa para variar o dia.`,
+        type:tpl.type,
+        tip:'Alternativa sugerida para evitar repetição de atrações.'
+      });
+      uniqueNames.add(name);
+    }
+    idx++;
+  }
+  return out;
+}
+
 // ═══════════════════════════════════════════════════
 // GENERATE
 // ═══════════════════════════════════════════════════
@@ -698,7 +802,12 @@ function generate(){
   const msgs=['Montando seu roteiro…','Verificando a melhor estação…','Organizando os dias…','Quase pronto!'];
   let mi=0;
   const iv=setInterval(()=>{document.getElementById('loading-msg').textContent=msgs[(++mi)%msgs.length];},1200);
-  setTimeout(()=>{clearInterval(iv);document.getElementById('loading').classList.remove('show');buildItinerary(ck,mode==='city'?cv:null,selectedDays,selectedMonth);document.getElementById('result').style.display='block';},1400);
+  setTimeout(()=>{
+    clearInterval(iv);
+    document.getElementById('loading').classList.remove('show');
+    buildItinerary(ck,mode==='city'?cv:null,selectedDays,selectedMonth);
+    document.getElementById('result').style.display='block';
+  },1400);
 }
 
 // ═══════════════════════════════════════════════════
@@ -724,34 +833,19 @@ function buildItinerary(ck,cityFilter,days,month){
 function buildCityItinerary(city,ck,days,month,si,flag,destName){
   const cityData=CITY_ACTS[city];
   const countryGeneric=COUNTRY_GENERIC_ACTS[ck]||COUNTRY_GENERIC_ACTS.default_generic;
-
-  // Pegar atividades — prioriza banco específico da cidade, fallback para genérico do país
-  let pool=cityData?[...cityData.acts]:countryGeneric.length?[...countryGeneric]:[...COUNTRY_GENERIC_ACTS.default_generic];
-
-  // Aplicar notas sazonais
-  pool=pool.map(a=>{
-    const snote=a.seasonal&&a.seasonal[month]?a.seasonal[month]:null;
-    return {...a,snote};
-  });
+  let pool=buildActivityPool(cityData,countryGeneric,month,`${ck}-${city}-${month}-city`);
 
   // MÁXIMO de atividades realistas por dia em cidade:
   // 3 atividades de dia (manhã, tarde, final de tarde) + 1 opcional noturna
-  // Para roteiro longo, cicla o pool mas avisa quando estão se repetindo
   const ACT_PER_DAY=3;
+  pool=enrichPoolForLongTrips(pool,city,days*ACT_PER_DAY);
   const dayPlans=[];
   const DAY_TITLES=['Chegada & Primeiras Impressões','Monumentos & Cultura','Gastronomia & Bairros','Arte & Museus','Vida Local & Mercados','Natureza & Paisagens','Exploração & Descoberta','Relaxe & Contemplação','Patrimônio & Arquitetura','Sabores & Tradições'];
-
-  // Para cidades com poucos dias e poucas atividades no pool, garantir variedade
-  let actIdx=0;
+  const usedCounts={};
+  let lastDayNames=[];
   for(let d=0;d<days;d++){
-    const dayActs=[];
-    for(let j=0;j<ACT_PER_DAY;j++){
-      dayActs.push(pool[actIdx%pool.length]);
-      actIdx++;
-    }
-    // Adicionar atividade noturna se houver no pool (tipo Noite) e for após o 1º dia
-    const nightAct=pool.find((a,i)=>a.type&&a.type.includes('Noite')&&i!==actIdx-1&&i!==actIdx-2&&i!==actIdx-3);
-    if(nightAct&&d>0) dayActs.push(nightAct);
+    const dayActs=pickDayActivities(pool,usedCounts,lastDayNames,ACT_PER_DAY,d>0);
+    lastDayNames=dayActs.map(a=>a.n);
     dayPlans.push({day:d+1,city,title:DAY_TITLES[d%DAY_TITLES.length],activities:dayActs});
   }
 
@@ -789,16 +883,16 @@ function buildCountryItinerary(ck,countryObj,cleanName,days,month,si,flag){
   routeCities.forEach((rc,ci)=>{
     const cityData=CITY_ACTS[rc.city];
     const countryGeneric=COUNTRY_GENERIC_ACTS[ck]||COUNTRY_GENERIC_ACTS.default_generic;
-    const pool=cityData?[...cityData.acts]:countryGeneric.length?[...countryGeneric]:[...COUNTRY_GENERIC_ACTS.default_generic];
-    const poolWithSeason=pool.map(a=>({...a,snote:a.seasonal&&a.seasonal[month]?a.seasonal[month]:null}));
-
-    let actIdx=0;
+    let poolWithSeason=buildActivityPool(cityData,countryGeneric,month,`${ck}-${rc.city}-${month}-${ci}`);
+    poolWithSeason=enrichPoolForLongTrips(poolWithSeason,rc.city,rc.days*3);
+    const usedCounts={};
+    let lastDayNames=[];
     for(let dd=0;dd<rc.days;dd++){
       const globalDay=rc.startDay+dd;
       const isArrivalDay=globalDay===rc.startDay&&ci>0; // dia de chegada numa nova cidade
       const actsCount=isArrivalDay?2:3; // dia de chegada: 2 atividades (viagem tomou tempo)
-      const dayActs=[];
-      for(let j=0;j<actsCount;j++){dayActs.push(poolWithSeason[actIdx%poolWithSeason.length]);actIdx++;}
+      const dayActs=pickDayActivities(poolWithSeason,usedCounts,lastDayNames,actsCount,dd>0);
+      lastDayNames=dayActs.map(a=>a.n);
       dayPlans.push({
         day:globalDay,
         city:rc.city,
@@ -828,7 +922,9 @@ function renderResult(flag,name,si,month,days,isCity,routeCities,dayPlans,ck,abo
 
   const daysHTML=dayPlans.map((dp,di)=>{
     const travelNote=dp.isTravel&&dp.prevCity?`<div class="travel-note"><div class="travel-note-icon">🚌</div><p>Deslocamento de ${dp.prevCity} para ${dp.city}. Considere transporte de manhã (trem, ônibus ou voo) e aproveite a tarde para se estabelecer.</p></div>`:'';
-    const actsHTML=dp.activities.map((a,ai)=>`<div class="act"><div class="act-bullet"></div><div class="act-content"><div class="act-name">${a.n}</div><div class="act-desc">${a.d}</div><div class="act-tags">${a.type?`<span class="act-tag tag-type">${a.type}</span>`:''} ${a.snote?`<span class="act-tag tag-season">${a.snote}</span>`:''} ${a.tip?`<span class="act-tag tag-tip">💡 ${a.tip}</span>`:''}</div></div></div>`).join('');
+    const actsHTML=dp.activities.map((a,ai)=>{
+      return `<div class="act"><div class="act-bullet"></div><div class="act-content"><div class="act-head"><div class="act-name">${a.n}</div></div><div class="act-desc">${a.d}</div><div class="act-tags">${a.type?`<span class="act-tag tag-type">${a.type}</span>`:''} ${a.snote?`<span class="act-tag tag-season">${a.snote}</span>`:''} ${a.tip?`<span class="act-tag tag-tip">💡 ${a.tip}</span>`:''}</div></div></div>`;
+    }).join('');
     return `<div class="day-card" style="animation-delay:${di*.04}s"><div class="day-head"><div class="day-head-left"><span class="day-num">Dia ${dp.day}</span><span class="day-title">${dp.title}</span></div>${routeCities.length>1?`<span class="day-city-tag">📍 ${dp.city}</span>`:''}</div>${travelNote}<div class="day-body">${actsHTML}</div></div>`;
   }).join('');
 
