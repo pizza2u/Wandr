@@ -21,4 +21,4 @@ Este projeto não possui dependências externas (como React, Vue, NPM, etc), foc
 * **Vanilla JavaScript (ES6+):** Lógica de estado, manipulação do DOM e bancos de dados em objetos/arrays locais.
 
 ## 🚀 Como executar o projeto
-Clique aqui: 
+Clique aqui: (https://pizza2u.github.io/Wandr/)[https://pizza2u.github.io/Wandr/]
