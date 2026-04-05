@@ -630,6 +630,7 @@ const COUNTRY_TIPS={
 // STATE
 // ═══════════════════════════════════════════════════
 let mode='country', selectedMonth=null, selectedDays=7, showPhotoOption=true;
+let photoRequestSeq=0;
 
 const CITY_PHOTOS={
   'Rio de Janeiro':'https://upload.wikimedia.org/wikipedia/commons/8/87/Cidade_Maravilhosa.jpg',
@@ -752,12 +753,42 @@ function togglePhotos(enabled){
 }
 
 function getPhotoUrl(activityName,city){
-  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||buildWebPhotoUrl(activityName,city)||buildInlinePhoto(activityName,city);
+  return ACTIVITY_PHOTOS[activityName]||CITY_PHOTOS[city]||'';
 }
 
 function buildWebPhotoUrl(activityName,city){
   const q=`${activityName||''}, ${city||''}, landmark, travel`;
   return `https://source.unsplash.com/1600x900/?${encodeURIComponent(q)}`;
+}
+
+async function fetchWikipediaPhoto(query){
+  if(!query) return '';
+  try{
+    const endpoint=`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
+    const rsp=await fetch(endpoint);
+    if(!rsp.ok) return '';
+    const data=await rsp.json();
+    return (data.thumbnail&&data.thumbnail.source)||(data.originalimage&&data.originalimage.source)||'';
+  }catch(e){
+    return '';
+  }
+}
+
+async function resolvePhotoUrl(activityName,city){
+  const mapped=getPhotoUrl(activityName,city);
+  if(mapped) return mapped;
+
+  const candidates=[
+    activityName,
+    `${activityName} ${city}`,
+    `${activityName} in ${city}`,
+    city
+  ];
+  for(const q of candidates){
+    const wikiPhoto=await fetchWikipediaPhoto(q);
+    if(wikiPhoto) return wikiPhoto;
+  }
+  return buildWebPhotoUrl(activityName,city);
 }
 
 function buildInlinePhoto(title,city){
@@ -806,23 +837,29 @@ function escSingle(v){
   return String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 
-function openPhotoModal(url,title,city){
-  if(!url) return;
+async function openPhotoModal(title,city){
   const modal=document.getElementById('photo-modal');
   const img=document.getElementById('photo-modal-img');
   const cap=document.getElementById('photo-modal-cap');
+  const reqId=++photoRequestSeq;
   img.dataset.title=title;
   img.dataset.city=city;
   img.dataset.fallback='0';
-  img.src=url;
+  img.src=buildInlinePhoto('Carregando foto…',city);
   img.alt=`Foto de ${title} em ${city}`;
   cap.textContent=`${title} — ${city}`;
   modal.classList.add('show');
+
+  const resolved=await resolvePhotoUrl(title,city);
+  if(reqId!==photoRequestSeq) return;
+  img.dataset.fallback='0';
+  img.src=resolved||buildInlinePhoto(title,city);
 }
 
 function closePhotoModal(){
   const modal=document.getElementById('photo-modal');
   const img=document.getElementById('photo-modal-img');
+  photoRequestSeq++;
   modal.classList.remove('show');
   img.src='';
   img.dataset.title='';
@@ -1055,8 +1092,7 @@ function renderResult(flag,name,si,month,days,isCity,routeCities,dayPlans,ck,abo
   const daysHTML=dayPlans.map((dp,di)=>{
     const travelNote=dp.isTravel&&dp.prevCity?`<div class="travel-note"><div class="travel-note-icon">🚌</div><p>Deslocamento de ${dp.prevCity} para ${dp.city}. Considere transporte de manhã (trem, ônibus ou voo) e aproveite a tarde para se estabelecer.</p></div>`:'';
     const actsHTML=dp.activities.map((a,ai)=>{
-      const photo=getPhotoUrl(a.n,dp.city);
-      const photoBtn=showPhotoOption&&photo?`<button type="button" class="act-photo-btn" onclick="openPhotoModal('${escSingle(photo)}','${escSingle(a.n)}','${escSingle(dp.city)}')">Ver foto</button>`:'';
+      const photoBtn=showPhotoOption?`<button type="button" class="act-photo-btn" onclick="openPhotoModal('${escSingle(a.n)}','${escSingle(dp.city)}')">Ver foto</button>`:'';
       return `<div class="act"><div class="act-bullet"></div><div class="act-content"><div class="act-head"><div class="act-name">${a.n}</div>${photoBtn}</div><div class="act-desc">${a.d}</div><div class="act-tags">${a.type?`<span class="act-tag tag-type">${a.type}</span>`:''} ${a.snote?`<span class="act-tag tag-season">${a.snote}</span>`:''} ${a.tip?`<span class="act-tag tag-tip">💡 ${a.tip}</span>`:''}</div></div></div>`;
     }).join('');
     return `<div class="day-card" style="animation-delay:${di*.04}s"><div class="day-head"><div class="day-head-left"><span class="day-num">Dia ${dp.day}</span><span class="day-title">${dp.title}</span></div>${routeCities.length>1?`<span class="day-city-tag">📍 ${dp.city}</span>`:''}</div>${travelNote}<div class="day-body">${actsHTML}</div></div>`;
