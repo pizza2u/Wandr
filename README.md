@@ -2,7 +2,7 @@
 
 O **Wandr** é uma aplicação web "single-file" (HTML, CSS e JavaScript puros em um único arquivo) que gera roteiros de viagem dinâmicos baseados no destino, na quantidade de dias e no mês escolhido pelo usuário. 
 
-🧠 **Contexto do Projeto:** Este projeto foi criado como um experimento prático para testar as capacidades de geração de código e estruturação lógica do modelo de inteligência artificial **Claude**, utilizando uma abordagem de *few-shot prompting* (poucos comandos).
+🧠 **Contexto do Projeto:** Este projeto foi criado como um experimento prático para testar as capacidades de geração de código e estruturação lógica do modelo de inteligência artificial **Claude** e aperfeiçoado com **Codex**, utilizando uma abordagem de *few-shot prompting* (poucos comandos).
 
 ## ✨ Funcionalidades
 
